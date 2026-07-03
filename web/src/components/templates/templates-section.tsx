@@ -12,6 +12,9 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [uploadName, setUploadName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renameTo, setRenameTo] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -68,6 +71,35 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
     [kind, uploadName, load],
   );
 
+  const doRename = useCallback(() => {
+    if (!renaming) return;
+    const to = renameTo.trim();
+    if (!to) return;
+    fetch("/api/templates/rename", { method: "POST", body: JSON.stringify({ kind, from: renaming, to }) })
+      .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
+      .then(({ ok, b }) => {
+        setMsg(ok ? `Renamed to ${b.name}` : b.error || "Rename failed");
+        setRenaming(null);
+        setRenameTo("");
+        if (ok) load();
+      })
+      .catch(() => setMsg("Rename failed"));
+  }, [kind, renaming, renameTo, load]);
+
+  const doDelete = useCallback(
+    (name: string) => {
+      fetch("/api/templates", { method: "DELETE", body: JSON.stringify({ kind, name }) })
+        .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
+        .then(({ ok, b }) => {
+          setMsg(ok ? `Deleted ${name}` : b.error || "Delete failed");
+          setConfirmDelete(null);
+          if (ok) load();
+        })
+        .catch(() => setMsg("Delete failed"));
+    },
+    [kind, load],
+  );
+
   const label = kind === "cv" ? "CV templates" : "Cover-letter templates";
   const uploadId = `template-upload-${kind}`;
   return (
@@ -118,8 +150,55 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {items.map((t) => (
-            <TemplateCard key={t.name} t={t} onSetDefault={setDefault} onEdit={setEditing} onDelete={() => {}} />
+            <TemplateCard
+              key={t.name}
+              t={t}
+              onSetDefault={setDefault}
+              onEdit={setEditing}
+              onRename={(name) => {
+                setRenaming(name);
+                setRenameTo("");
+              }}
+              onDelete={setConfirmDelete}
+            />
           ))}
+        </div>
+      )}
+      {renaming && (
+        <div className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-border bg-surface/50 p-3">
+          <label className="text-xs text-muted">
+            Rename “{renaming}” to
+            <input
+              autoFocus
+              className="mt-1 block w-52 rounded-md border border-border bg-surface px-2 py-1 text-sm text-foreground"
+              value={renameTo}
+              onChange={(e) => setRenameTo(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doRename()}
+            />
+          </label>
+          <Button size="sm" variant="primary" onClick={doRename} disabled={!renameTo.trim()}>
+            Rename
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setRenaming(null)}>
+            Cancel
+          </Button>
+        </div>
+      )}
+      {confirmDelete && (
+        <div
+          role="alertdialog"
+          aria-label={`Delete ${confirmDelete}`}
+          className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-red-500/30 bg-red-500/5 p-3"
+        >
+          <span className="text-sm text-foreground">
+            Delete “{confirmDelete}”? This cannot be undone (a backup is kept).
+          </span>
+          <Button size="sm" variant="primary" onClick={() => doDelete(confirmDelete)}>
+            Delete
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>
+            Cancel
+          </Button>
         </div>
       )}
       {editing && (

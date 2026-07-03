@@ -8,11 +8,13 @@ export function TemplateCard({
   t,
   onSetDefault,
   onEdit,
+  onRename,
   onDelete,
 }: {
   t: TemplateDto;
   onSetDefault: (name: string) => void;
   onEdit: (name: string) => void;
+  onRename: (name: string) => void;
   onDelete: (name: string) => void;
 }) {
   return (
@@ -46,6 +48,11 @@ export function TemplateCard({
         <Button size="sm" variant="outline" onClick={() => onEdit(t.name)}>
           Edit
         </Button>
+        {t.name !== "standard" && (
+          <Button size="sm" variant="ghost" onClick={() => onRename(t.name)}>
+            Rename
+          </Button>
+        )}
         {t.name !== "standard" && (
           <Button size="sm" variant="ghost" onClick={() => onDelete(t.name)}>
             Delete
