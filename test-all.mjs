@@ -10563,6 +10563,17 @@ try {
 } catch (e) {
   fail(`getonbrd provider tests crashed: ${e.message}`);
 }
+// ── 55. CV TEMPLATE MANAGEMENT (resolver + selection policy) ────
+
+console.log('\n55. CV template management (resolver + selection policy)');
+
+const tmplTests = run(NODE, ['--test', 'test/cv-templates.test.mjs']);
+if (tmplTests !== null) pass('cv-templates.mjs unit tests pass');
+else fail('cv-templates.mjs unit tests failed (run: node --test test/cv-templates.test.mjs)');
+
+const selTests = run(NODE, ['--test', 'test/cv-template-select.test.mjs']);
+if (selTests !== null) pass('cv-template-select.mjs unit tests pass');
+else fail('cv-template-select.mjs unit tests failed (run: node --test test/cv-template-select.test.mjs)');
 
 // ── SUMMARY ─────────────────────────────────────────────────────
 
