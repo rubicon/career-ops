@@ -46,6 +46,23 @@ export function templatePath(kind: TemplateKind, name: string): string {
   return path.join(careerOpsRoot(), "templates", base);
 }
 
+export type AssignmentEntry = { cv?: string; cover?: string };
+
+/** Path to the per-job assignment sidecar (spec Open Decision #1). */
+export function assignmentsPath(): string {
+  return path.join(careerOpsRoot(), "data", "template-assignments.json");
+}
+
+/** Read the sidecar map (application number → {cv?, cover?}); {} when absent/bad. */
+export function readAssignments(): Record<string, AssignmentEntry> {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(assignmentsPath(), "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 /** Spawn `node cv-templates.mjs <args>` in the project root; resolve stdout. */
 export function runTemplateCli(args: string[]): Promise<string> {
   const root = careerOpsRoot();
