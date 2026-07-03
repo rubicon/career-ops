@@ -2,11 +2,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { TemplateCard } from "./template-card";
+import { TemplateEditor } from "./template-editor";
 import type { TemplateDto } from "@/lib/templates";
 
 export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
   const [items, setItems] = useState<TemplateDto[] | null>(null);
   const [msg, setMsg] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/templates?kind=${kind}`)
@@ -44,9 +46,20 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {items.map((t) => (
-            <TemplateCard key={t.name} t={t} onSetDefault={setDefault} onEdit={() => {}} onDelete={() => {}} />
+            <TemplateCard key={t.name} t={t} onSetDefault={setDefault} onEdit={setEditing} onDelete={() => {}} />
           ))}
         </div>
+      )}
+      {editing && (
+        <TemplateEditor
+          kind={kind}
+          name={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setMsg("Template saved");
+            load();
+          }}
+        />
       )}
     </section>
   );
