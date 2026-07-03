@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { careerOpsRoot, rootScript } from "@/lib/career-ops";
 
 // Server-side glue for the template admin. Reads/validates go through the Phase
@@ -55,6 +57,28 @@ function safeJson(s: string): Record<string, string> {
     return JSON.parse(s);
   } catch {
     return {};
+  }
+}
+
+export type ValidationResult = { ok: boolean; missing: string[] };
+
+/**
+ * Validate template content for its kind through the resolver's `validate` CLI
+ * (single source of truth for the required-placeholder lists). The content is
+ * written to a temp sibling in templates/ so unsaved edits/uploads can be
+ * checked before install; the temp file never matches the discovery glob.
+ */
+export async function validateContent(kind: TemplateKind, content: string): Promise<ValidationResult> {
+  const dir = path.join(careerOpsRoot(), "templates");
+  fs.mkdirSync(dir, { recursive: true });
+  const tmp = path.join(dir, `.validate-${process.pid}-${randomUUID()}.tmp`);
+  fs.writeFileSync(tmp, content, "utf8");
+  try {
+    const out = await runTemplateCli(["validate", kind, tmp]);
+    const parsed = JSON.parse(out) as ValidationResult;
+    return { ok: Boolean(parsed.ok), missing: Array.isArray(parsed.missing) ? parsed.missing : [] };
+  } finally {
+    fs.rmSync(tmp, { force: true });
   }
 }
 

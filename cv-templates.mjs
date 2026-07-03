@@ -189,6 +189,13 @@ if (isMain) {
     } else if (cmd === 'resolve') {
       const name = positionals[0];
       process.stdout.write(resolveTemplate(kind, name, { format, fallback: Boolean(flags.fallback) }) + '\n');
+    } else if (cmd === 'validate') {
+      // node cv-templates.mjs validate <cv|cover> <path>
+      // Prints {ok, missing} JSON so a caller can check unsaved content by
+      // pointing at a temp file. Exit 0 even when invalid (the JSON carries the
+      // verdict); only a genuinely unreadable path is an error.
+      const path = positionals[0];
+      process.stdout.write(JSON.stringify(validateTemplate(path, kind)) + '\n');
     } else if (cmd === 'meta') {
       // node cv-templates.mjs meta <path> [--set key=value ...]
       // With no --set the call is read-only (prints the parsed header), so
@@ -213,6 +220,7 @@ if (isMain) {
         'Usage:\n' +
           '  node cv-templates.mjs list <cv|cover> [--format=html|tex]\n' +
           '  node cv-templates.mjs resolve <cv|cover> [name] [--format=html|tex] [--fallback]\n' +
+          '  node cv-templates.mjs validate <cv|cover> <path>\n' +
           '  node cv-templates.mjs meta <path> [--set key=value ...]\n'
       );
       process.exit(2);
