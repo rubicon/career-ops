@@ -38,7 +38,7 @@ export function TemplateCard({
           ))}
         </div>
       )}
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <Button
           size="sm"
           variant={t.isDefault ? "secondary" : "primary"}
