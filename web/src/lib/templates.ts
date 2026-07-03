@@ -109,6 +109,42 @@ function safeJson(s: string): Record<string, string> {
   }
 }
 
+// PII-free sample data for previews: deterministic, cacheable by template mtime
+// alone, and never leaks the user's real CV content.
+const SAMPLE: Record<string, string> = {
+  LANG: "en",
+  PAGE_WIDTH: "8.5in",
+  NAME: "Jordan Sample",
+  PHONE: "+1 555 0100",
+  EMAIL: "jordan@example.com",
+  LINKEDIN_URL: "#",
+  LINKEDIN_DISPLAY: "linkedin.com/in/jordan",
+  PORTFOLIO_URL: "#",
+  PORTFOLIO_DISPLAY: "jordan.example.com",
+  LOCATION: "Dallas, TX",
+  SECTION_SUMMARY: "Professional Summary",
+  SUMMARY_TEXT: "Sample summary line for preview.",
+  SECTION_COMPETENCIES: "Core Competencies",
+  COMPETENCIES: "<span>Strategy</span><span>Growth</span>",
+  SECTION_EXPERIENCE: "Work Experience",
+  EXPERIENCE: "<p>Sample Role — Sample Co (2020–2024)</p>",
+  SECTION_PROJECTS: "Projects",
+  PROJECTS: "<p>Sample project</p>",
+  SECTION_EDUCATION: "Education",
+  EDUCATION: "<p>Sample University</p>",
+  SECTION_CERTIFICATIONS: "Certifications",
+  CERTIFICATIONS: "<p>Sample cert</p>",
+  SECTION_SKILLS: "Skills",
+  SKILLS: "<p>Sample skills</p>",
+  ROLE_TITLE: "Sample Role",
+  OPENING: "Sample opening paragraph.",
+};
+
+/** Fill a template's {{TOKENS}} with PII-free sample data for a preview. */
+export function sampleFill(html: string): string {
+  return html.replace(/\{\{([A-Z_]+)\}\}/g, (_, k: string) => SAMPLE[k] ?? "");
+}
+
 export type ValidationResult = { ok: boolean; missing: string[] };
 
 /**

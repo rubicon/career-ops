@@ -6,12 +6,14 @@ import type { TemplateDto } from "@/lib/templates";
 
 export function TemplateCard({
   t,
+  kind,
   onSetDefault,
   onEdit,
   onRename,
   onDelete,
 }: {
   t: TemplateDto;
+  kind: "cv" | "cover";
   onSetDefault: (name: string) => void;
   onEdit: (name: string) => void;
   onRename: (name: string) => void;
@@ -47,6 +49,13 @@ export function TemplateCard({
         </Button>
         <Button size="sm" variant="outline" onClick={() => onEdit(t.name)}>
           Edit
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => window.open(`/api/templates/preview?kind=${kind}&name=${t.name}`, "_blank", "noopener")}
+        >
+          Preview
         </Button>
         {t.name !== "standard" && (
           <Button size="sm" variant="ghost" onClick={() => onRename(t.name)}>

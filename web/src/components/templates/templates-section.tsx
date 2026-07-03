@@ -153,6 +153,7 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
             <TemplateCard
               key={t.name}
               t={t}
+              kind={kind}
               onSetDefault={setDefault}
               onEdit={setEditing}
               onRename={(name) => {
