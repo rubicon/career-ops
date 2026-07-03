@@ -3,11 +3,17 @@
 import { readFile, writeFile, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { resolve, dirname, basename, join } from 'path';
-import { fileURLToPath } from 'url';
+import { resolveTemplate } from './cv-templates.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const TEMPLATE_PATH = resolve(__dirname, 'templates', 'cv-template.tex');
 const PLACEHOLDER_RE = /\{\{[A-Z_]+\}\}/g;
+
+// Resolve which CV .tex template to fill. Reads config's cv.template through the
+// resolver; with nothing configured it returns the base templates/cv-template.tex,
+// byte-identical to the prior hardcoded path. fallback:true degrades a config
+// default that ships no .tex sibling to the base rather than failing.
+function cvTexTemplatePath() {
+  return resolveTemplate('cv', undefined, { format: 'tex', fallback: true });
+}
 
 function escapeLatex(text, mode = 'text') {
   if (typeof text !== 'string') return '';
@@ -136,12 +142,15 @@ async function main() {
     process.exit(1);
   }
 
-  if (!existsSync(TEMPLATE_PATH)) {
-    console.error(`Template not found: ${TEMPLATE_PATH}`);
+  let templatePath;
+  try {
+    templatePath = cvTexTemplatePath();
+  } catch (err) {
+    console.error(err.message);
     process.exit(1);
   }
 
-  let template = await readFile(TEMPLATE_PATH, 'utf-8');
+  let template = await readFile(templatePath, 'utf-8');
 
   const emailUrl = sanitizeUrl(payload.email?.url || '');
   const emailDisplay = payload.email?.display || emailUrl;
@@ -253,12 +262,15 @@ async function runSelfTest() {
   const absInput = resolve(tmpInput);
   const absOutput = resolve(testOutput);
 
-  if (!existsSync(TEMPLATE_PATH)) {
-    console.error(`Self-test failed: template not found at ${TEMPLATE_PATH}`);
+  let templatePath;
+  try {
+    templatePath = cvTexTemplatePath();
+  } catch {
+    console.error('Self-test failed: cv-template.tex not found');
     process.exit(1);
   }
 
-  let template = await readFile(TEMPLATE_PATH, 'utf-8');
+  let template = await readFile(templatePath, 'utf-8');
 
   const emailUrl = sanitizeUrl(sample.email?.url || '');
   const emailDisplay = sample.email?.display || emailUrl;

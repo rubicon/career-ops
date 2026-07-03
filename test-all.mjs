@@ -10716,6 +10716,36 @@ try {
   fail(`avature provider tests crashed: ${e.message}`);
 }
 
+// ── CV / cover template resolver (cv-templates.mjs) ─────────────────
+// Run the resolver's own unit suite inside the enforced run so CI gates on it,
+// then assert the backward-compatible wiring: with no config, resolveTemplate
+// returns the base cv/cover templates the generators used to hardcode.
+try {
+  execFileSync(NODE, ['cv-templates.test.mjs'], { cwd: ROOT, encoding: 'utf-8', timeout: 30000 });
+  pass('cv-templates.test.mjs: resolver unit suite passes');
+} catch (err) {
+  fail(`cv-templates.test.mjs failed: ${((err.stdout || '') + (err.stderr || err.message || '')).slice(0, 400)}`);
+}
+
+try {
+  const { resolveTemplate } = await import(pathToFileURL(join(ROOT, 'cv-templates.mjs')).href);
+  const noProfile = join(ROOT, 'config', '__no_such_profile__.yml');
+  const cvHtml = resolveTemplate('cv', undefined, { format: 'html', profilePath: noProfile });
+  const cvTex = resolveTemplate('cv', undefined, { format: 'tex', fallback: true, profilePath: noProfile });
+  const coverHtml = resolveTemplate('cover', undefined, { format: 'html', profilePath: noProfile });
+  if (
+    cvHtml.endsWith(join('templates', 'cv-template.html')) &&
+    cvTex.endsWith(join('templates', 'cv-template.tex')) &&
+    coverHtml.endsWith(join('templates', 'cover-letter-template.html'))
+  ) {
+    pass('cv-templates resolveTemplate: unconfigured resolves the base cv/cover templates (backward-compatible wiring)');
+  } else {
+    fail(`cv-templates resolveTemplate base wrong: "${cvHtml}" / "${cvTex}" / "${coverHtml}"`);
+  }
+} catch (err) {
+  fail(`cv-templates resolveTemplate base-resolution crashed: ${err.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

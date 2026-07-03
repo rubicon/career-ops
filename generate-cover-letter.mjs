@@ -14,9 +14,10 @@
  */
 
 import { readFileSync, existsSync, mkdirSync } from "fs";
-import { dirname, resolve, basename, join } from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import { resolve, basename, join } from "path";
+import { pathToFileURL } from "url";
 import { parseArgs } from "util";
+import { resolveTemplate } from "./cv-templates.mjs";
 
 const OUTPUT_ROOT = resolve("output");
 
@@ -103,15 +104,22 @@ function buildFootnotesBlock(footnotes) {
   return `<div class="footnotes">\n${lines}\n  </div>`;
 }
 
-export function buildHtml(payload) {
+export function buildHtml(payload, opts = {}) {
   _require(payload, ["candidate", "letter"], "payload");
   const candidate = payload.candidate;
   const letter = payload.letter;
   _require(candidate, ["name"], "candidate");
   _require(letter, ["role_title", "opening", "profile_intro"], "letter");
 
-  const scriptDir = dirname(fileURLToPath(import.meta.url));
-  const templatePath = resolve(scriptDir, "templates", "cover-letter-template.html");
+  // Resolve which cover-letter template to fill. An explicit opts.templateName
+  // wins; otherwise the resolver reads config's cover_letter.template, and with
+  // neither set it returns the base cover-letter-template.html — byte-identical
+  // to the prior hardcoded path. fallback:true degrades a config default that
+  // only ships an HTML sibling of another format gracefully to the base.
+  const templatePath = resolveTemplate("cover", opts.templateName, {
+    format: "html",
+    fallback: true,
+  });
   let html = readFileSync(templatePath, "utf-8");
 
   // Optional salutation (e.g. "Dear Jane Smith,"). Omitted -> no salutation,
@@ -150,9 +158,10 @@ export function buildHtml(payload) {
 async function main() {
   const { values: args } = parseArgs({
     options: {
-      payload: { type: "string" },
-      out:     { type: "string" },
-      help:    { type: "boolean", short: "h" },
+      payload:  { type: "string" },
+      out:      { type: "string" },
+      template: { type: "string" },
+      help:     { type: "boolean", short: "h" },
     },
     strict: false,
   });
@@ -160,10 +169,12 @@ async function main() {
   if (args.help || !args.payload) {
     console.log(`
 Usage:
-  node generate-cover-letter.mjs --payload payload.json [--out output/path.pdf]
+  node generate-cover-letter.mjs --payload payload.json [--out output/path.pdf] [--template name]
 
-  --payload   Path to the JSON payload file (required)
-  --out       Override output path from payload (optional)
+  --payload    Path to the JSON payload file (required)
+  --out        Override output path from payload (optional)
+  --template   Named cover-letter template to use (optional; defaults to
+               config's cover_letter.template, else the base template)
 `);
     process.exit(args.help ? 0 : 1);
   }
@@ -194,7 +205,7 @@ Usage:
   const { renderHtmlToPdf } = await import("./generate-pdf.mjs");
 
   try {
-    const html = buildHtml(payload);
+    const html = buildHtml(payload, { templateName: args.template });
     const outputPath = resolve(payload.output_path);
     await renderHtmlToPdf(html, outputPath, { format: "a4" });
     console.log(`\nCover letter PDF: ${payload.output_path}`);

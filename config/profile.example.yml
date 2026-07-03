@@ -84,6 +84,11 @@ location:
 
 cv:
   output_format: "html" # "html" (default) or "latex"
+  # (Optional) Named CV template design. Picks templates/cv-template.<name>.html
+  # (and the matching .tex for LaTeX output). Omit or leave blank to use the base
+  # templates/cv-template.html — behavior is unchanged if you never set this.
+  # List installed names with `node cv-templates.mjs list cv`.
+  # template: executive-authority
   # (Optional) Canva resume design ID for visual CV generation via /career-ops pdf.
   # Find it in your Canva design URL: https://www.canva.com/design/DAxxxxxxx/...
   # The ID starts with "D" and is 11 characters long.
@@ -95,6 +100,12 @@ cv:
 # All fields are optional — omit any you don't need.
 
 cover_letter:
+  # (Optional) Named cover-letter template. Picks
+  # templates/cover-letter-template.<name>.html; omit or leave blank for the base
+  # templates/cover-letter-template.html. List names with
+  # `node cv-templates.mjs list cover`.
+  # template: executive-authority
+
   # Your notice period in calendar days. Surfaced as a prompt default when the
   # JD requests an immediate start. The user confirms the actual value before it
   # appears in the letter.
