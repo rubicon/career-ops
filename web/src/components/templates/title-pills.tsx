@@ -41,7 +41,7 @@ export function TitlePills({ value, onChange }: { value: string; onChange: (v: s
             aria-pressed={on}
             onClick={() => toggle(t)}
             className={cn(
-              "rounded-full border px-2 py-0.5 text-xs transition-colors",
+              "rounded-full border px-2 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
               on
                 ? "border-brand bg-brand text-brand-foreground"
                 : "border-border bg-surface text-muted hover:bg-surface-hover",

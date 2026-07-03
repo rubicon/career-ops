@@ -16,6 +16,12 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
   const [renameTo, setRenameTo] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const deleteRef = useRef<HTMLDivElement>(null);
+
+  // Move focus into the delete confirmation so it is announced and reachable.
+  useEffect(() => {
+    if (confirmDelete) deleteRef.current?.focus();
+  }, [confirmDelete]);
 
   const load = useCallback(() => {
     fetch(`/api/templates?kind=${kind}`)
@@ -128,6 +134,8 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
           type="file"
           accept=".html"
           className="sr-only"
+          aria-hidden="true"
+          tabIndex={-1}
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) upload(f);
@@ -187,9 +195,11 @@ export function TemplatesSection({ kind }: { kind: "cv" | "cover" }) {
       )}
       {confirmDelete && (
         <div
+          ref={deleteRef}
           role="alertdialog"
           aria-label={`Delete ${confirmDelete}`}
-          className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-red-500/30 bg-red-500/5 p-3"
+          tabIndex={-1}
+          className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-red-500/30 bg-red-500/5 p-3 focus:outline-none"
         >
           <span className="text-sm text-foreground">
             Delete “{confirmDelete}”? This cannot be undone (a backup is kept).
