@@ -8,7 +8,11 @@ import { beforeEach } from "vitest";
 // templates/ + config/ + data/ that mirrors a fresh install. Never touches the
 // developer's real templates/ or config/.
 const repoRoot = path.resolve(__dirname, "..");
-const testRoot = path.join(repoRoot, ".vitest-tmp");
+// One root per Vitest worker so parallel test files never stomp each other's
+// beforeEach resets. Stays inside the repo so the spawned resolver CLI still
+// walks up to the real node_modules for js-yaml.
+const workerId = process.env.VITEST_POOL_ID || process.env.VITEST_WORKER_ID || "0";
+const testRoot = path.join(repoRoot, `.vitest-tmp-${workerId}`);
 
 process.env.CAREER_OPS_ROOT = testRoot;
 

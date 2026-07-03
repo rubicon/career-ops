@@ -237,7 +237,14 @@ export function AssistantConsole() {
     return {
       push: (p) => router.push(p),
       replace: (p) => router.replace(p),
-      startJob,
+      // Inject the explicit this-run template pick into CV pdf jobs (unless the
+      // caller already set one); the server still resolves assignment/route/default.
+      startJob: (opts) =>
+        startJob(
+          opts.kind === "pdf" && templatePickRef.current.cv && !opts.template
+            ? { ...opts, template: templatePickRef.current.cv }
+            : opts,
+        ),
       inbox: pipelineRef.current.inbox,
       applications: pipelineRef.current.applications,
       jobForUrl: (url) => {

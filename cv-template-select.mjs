@@ -69,3 +69,24 @@ export function selectTemplateName(kind, opts = {}) {
   const def = loadProfileDefault(kind, profilePath ? { profilePath } : {});
   return def || 'standard';
 }
+
+// ---- CLI ----
+// node cv-template-select.mjs <cv|cover> [--n=NUM] [--title="..."] [--pick=name]
+// Prints the effective template name (never throws — always yields at least
+// "standard"), so the web/batch can inject the NAME into the agent prompt.
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  const [kind, ...rest] = process.argv.slice(2);
+  const flags = Object.fromEntries(
+    rest
+      .filter((a) => a.startsWith('--'))
+      .map((a) => {
+        const [k, v] = a.replace(/^--/, '').split('=');
+        return [k, v ?? true];
+      })
+  );
+  const str = (v) => (typeof v === 'string' ? v : undefined);
+  process.stdout.write(
+    selectTemplateName(kind, { n: str(flags.n), jobTitle: str(flags.title), pick: str(flags.pick) }) + '\n'
+  );
+}

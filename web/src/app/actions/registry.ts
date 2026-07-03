@@ -29,6 +29,7 @@ export type StartJobInput = {
   input: string;
   page?: string;
   batchId?: string;
+  template?: string; // explicit this-run template pick (precedence step 1)
 };
 
 export type ActionCtx = {

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { careerOpsRoot, rootScript } from "@/lib/career-ops";
+import { careerOpsRoot, rootScript, readApplications } from "@/lib/career-ops";
 
 // Server-side glue for the template admin. Reads/validates go through the Phase
 // A resolver (cv-templates.mjs) via a spawned CLI so Next never bundles the
@@ -63,10 +63,10 @@ export function readAssignments(): Record<string, AssignmentEntry> {
   }
 }
 
-/** Spawn `node cv-templates.mjs <args>` in the project root; resolve stdout. */
-export function runTemplateCli(args: string[]): Promise<string> {
+/** Spawn `node <rootScript> <args>` in the project root; resolve stdout. */
+function spawnRootScript(scriptBaseName: string, args: string[]): Promise<string> {
   const root = careerOpsRoot();
-  const script = rootScript("cv-templates");
+  const script = rootScript(scriptBaseName);
   return new Promise((resolve, reject) => {
     const p = spawn(process.execPath, [script, ...args], { cwd: root });
     let out = "";
@@ -76,6 +76,29 @@ export function runTemplateCli(args: string[]): Promise<string> {
     p.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(err.trim() || `exit ${code}`))));
     p.on("error", reject);
   });
+}
+
+/** Spawn the resolver CLI (cv-templates.mjs). */
+export function runTemplateCli(args: string[]): Promise<string> {
+  return spawnRootScript("cv-templates", args);
+}
+
+/**
+ * The effective template name for a generation, computed by the selection policy
+ * (pick > per-job assignment > title route > profile default > standard). The
+ * job title comes from the tracker row for application n. Fail-soft to standard.
+ */
+export async function effectiveTemplateName(
+  kind: TemplateKind,
+  n: string,
+  pick?: string,
+): Promise<string> {
+  const app = readApplications().find((a) => String(a.n) === String(n));
+  const title = app?.role ?? "";
+  const args = [kind, `--n=${n}`, `--title=${title}`];
+  if (pick) args.push(`--pick=${pick}`);
+  const out = (await spawnRootScript("cv-template-select", args).catch(() => "")).trim();
+  return out || "standard";
 }
 
 function safeJson(s: string): Record<string, string> {
