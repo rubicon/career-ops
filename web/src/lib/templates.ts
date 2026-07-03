@@ -31,6 +31,15 @@ export function isKind(v: unknown): v is TemplateKind {
   return v === "cv" || v === "cover";
 }
 
+/** Display name to kebab, matching the resolver's kebab() so names round-trip. */
+export function kebabName(display: string): string {
+  return String(display)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 /** Absolute path to a template file. Base ("standard") drops the name segment. */
 export function templatePath(kind: TemplateKind, name: string): string {
   const base = name === "standard" ? `${PREFIX[kind]}.html` : `${PREFIX[kind]}.${name}.html`;
