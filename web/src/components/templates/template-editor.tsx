@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { TitlePills } from "./title-pills";
 import type { TemplateDto } from "@/lib/templates";
 
 export function TemplateEditor({
@@ -86,7 +87,9 @@ export function TemplateEditor({
           {field("date", "Release date")}
           {field("description", "Description")}
         </div>
-        <p className="mt-2 text-xs text-muted">Target titles (comma-separated) — the title-routing key</p>
+        <p className="mt-3 mb-1 text-xs text-muted">Target titles — the title-routing key</p>
+        <TitlePills value={meta.titles ?? ""} onChange={(v) => setMeta((m) => ({ ...m, titles: v }))} />
+        <p className="mt-2 text-xs text-muted">Or type titles (comma-separated)</p>
         {field("titles", "")}
         <textarea
           className="mt-3 h-64 w-full rounded-md border border-border bg-background p-2 font-mono text-xs"

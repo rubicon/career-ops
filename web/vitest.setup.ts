@@ -38,4 +38,5 @@ beforeEach(() => {
   fs.writeFileSync(path.join(templates, "cover-letter-template.html"), BASE_COVER);
   resetDir("config");
   resetDir("data");
+  fs.rmSync(path.join(testRoot, "portals.yml"), { force: true });
 });
