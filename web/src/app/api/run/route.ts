@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 800; // a real oferta evaluation / pdf-mode CV tailoring + render is heavy and multi-step
 
-// The web ORCHESTRATES the real career-ops engine — it does NOT reimplement it
+// The web ORCHESTRATES the real career-ops engine, it does NOT reimplement it
 // (buildPrompt lives in @/lib/run-prompt). The pdf prompt no longer hardcodes a
 // template file: the server computes the effective template NAME here (pick >
 // per-job assignment > title route > profile default > standard) and injects it,

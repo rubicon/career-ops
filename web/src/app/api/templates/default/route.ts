@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 // USER-LAYER write (DATA_CONTRACT): profile.yml holds the user's archetypes /
 // narrative. We touch ONLY cv.template / cover_letter.template, preserve every
-// sibling key, and write atomically with a backup — mirroring /api/profile.
+// sibling key, and write atomically with a backup, mirroring /api/profile.
 const PROFILE_KEY = { cv: "cv", cover: "cover_letter" } as const;
 
 function isObj(v: unknown): v is Record<string, unknown> {

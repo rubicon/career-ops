@@ -100,3 +100,6 @@ package-lock.json
 
 # Planning (local scratchpad)
 plan/
+
+# Vitest hermetic test roots (created by web/vitest.setup.ts at repo root)
+.vitest-tmp*/

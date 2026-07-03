@@ -115,7 +115,7 @@ export function TemplateEditor({
           {field("description", "Description")}
         </div>
         <p className="mt-3 mb-1 text-xs text-muted" id={`${titleId}-titles`}>
-          Target titles — the title-routing key
+          Target titles (the title-routing key)
         </p>
         <TitlePills value={meta.titles ?? ""} onChange={(v) => setMeta((m) => ({ ...m, titles: v }))} />
         <p className="mt-2 mb-1 text-xs text-muted">Or type titles (comma-separated)</p>

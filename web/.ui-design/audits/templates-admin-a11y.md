@@ -26,7 +26,7 @@
 |------|------|-------|------------|
 | Card heading (foreground) | 20.1:1 | 15.7:1 | Pass |
 | Muted labels/descriptions (`text-muted`) | 8.2:1 | 6.5:1 | Pass |
-| Preview/action buttons | 20.1:1 | — | Pass |
+| Preview/action buttons | 20.1:1 | - | Pass |
 
 Default badge reuses the app-wide emerald token pair. No new low-contrast tokens introduced.
 

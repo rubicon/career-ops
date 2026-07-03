@@ -127,7 +127,7 @@ const SAMPLE: Record<string, string> = {
   SECTION_COMPETENCIES: "Core Competencies",
   COMPETENCIES: "<span>Strategy</span><span>Growth</span>",
   SECTION_EXPERIENCE: "Work Experience",
-  EXPERIENCE: "<p>Sample Role — Sample Co (2020–2024)</p>",
+  EXPERIENCE: "<p>Sample Role, Sample Co (2020-2024)</p>",
   SECTION_PROJECTS: "Projects",
   PROJECTS: "<p>Sample project</p>",
   SECTION_EDUCATION: "Education",

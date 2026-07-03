@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// cv-template-select.mjs — decide WHICH template name applies to a given job.
+// cv-template-select.mjs: decide WHICH template name applies to a given job.
 // Thin policy layer over cv-templates.mjs; the file resolution + validation
 // still happens in resolveTemplate(). Reused by the web app and batch/pipeline.
 
@@ -72,7 +72,7 @@ export function selectTemplateName(kind, opts = {}) {
 
 // ---- CLI ----
 // node cv-template-select.mjs <cv|cover> [--n=NUM] [--title="..."] [--pick=name]
-// Prints the effective template name (never throws — always yields at least
+// Prints the effective template name (never throws, always yields at least
 // "standard"), so the web/batch can inject the NAME into the agent prompt.
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
