@@ -4,7 +4,7 @@
 // Backward-compatible: with no config and no named files, resolves the base
 // templates/cv-template.html (name "standard"), identical to prior behavior.
 
-import { readdirSync, readFileSync, existsSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -146,6 +146,28 @@ export function resolveTemplate(kind, name, opts = {}) {
   return path;
 }
 
+// Canonical field order for the metadata header. parseMeta reads these back.
+const META_ORDER = ['name', 'description', 'version', 'date', 'titles'];
+
+export function serializeMeta(meta = {}) {
+  const lines = META_ORDER.filter(
+    (k) => meta[k] != null && String(meta[k]).trim() !== ''
+  ).map((k) => `${k}: ${String(meta[k]).trim()}`);
+  return `<!-- career-ops-template\n${lines.join('\n')}\n-->`;
+}
+
+// Write a metadata header into the file at `path`: replace an existing
+// career-ops-template block, or insert one at the very top if absent. The
+// body is left untouched. Symmetric with parseMeta so the header contract has
+// a single reader and a single writer.
+export function applyMeta(path, meta = {}) {
+  const text = readFileSync(path, 'utf-8');
+  const block = serializeMeta(meta);
+  const re = /<!--\s*career-ops-template[\s\S]*?-->/;
+  const next = re.test(text) ? text.replace(re, block) : `${block}\n${text}`;
+  writeFileSync(path, next);
+}
+
 // ---- CLI ----
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
@@ -167,8 +189,32 @@ if (isMain) {
     } else if (cmd === 'resolve') {
       const name = positionals[0];
       process.stdout.write(resolveTemplate(kind, name, { format, fallback: Boolean(flags.fallback) }) + '\n');
+    } else if (cmd === 'meta') {
+      // node cv-templates.mjs meta <path> [--set key=value ...]
+      // With no --set the call is read-only (prints the parsed header), so
+      // callers can enrich a listing without rewriting files. With --set it
+      // merges the pairs over the current header and writes the result.
+      const path = argv[1];
+      const setArgs = [];
+      for (let i = 0; i < argv.length; i++) {
+        if (argv[i] === '--set' && argv[i + 1] != null) setArgs.push(argv[i + 1]);
+      }
+      if (setArgs.length) {
+        const sets = {};
+        for (const pair of setArgs) {
+          const [k, ...rest] = String(pair).split('=');
+          sets[k] = rest.join('=');
+        }
+        applyMeta(path, { ...parseMeta(path), ...sets });
+      }
+      process.stdout.write(JSON.stringify(parseMeta(path), null, 2) + '\n');
     } else {
-      process.stderr.write('Usage: node cv-templates.mjs <list|resolve> <cv|cover> [name] [--format=html|tex] [--fallback]\n');
+      process.stderr.write(
+        'Usage:\n' +
+          '  node cv-templates.mjs list <cv|cover> [--format=html|tex]\n' +
+          '  node cv-templates.mjs resolve <cv|cover> [name] [--format=html|tex] [--fallback]\n' +
+          '  node cv-templates.mjs meta <path> [--set key=value ...]\n'
+      );
       process.exit(2);
     }
   } catch (err) {

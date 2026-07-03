@@ -18,7 +18,7 @@ test('KINDS defines cv and cover', () => {
   assert.equal(KINDS.cover.prefix, 'cover-letter-template');
 });
 
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { listTemplates, parseMeta } from '../cv-templates.mjs';
@@ -126,4 +126,41 @@ test('loadProfileDefault: reads nested key, null when unset/missing', () => {
   const { dir, profile } = fixtureWithProfile('executive-authority');
   assert.equal(loadProfileDefault('cv', { profilePath: profile }), 'executive-authority');
   assert.equal(loadProfileDefault('cv', { profilePath: join(dir, 'nope.yml') }), null);
+});
+
+import { serializeMeta, applyMeta } from '../cv-templates.mjs';
+
+test('serializeMeta: canonical order, omits empty', () => {
+  const block = serializeMeta({
+    name: 'Executive Authority',
+    description: 'Navy + gold',
+    version: '1.0.0',
+    date: '2026-07-02',
+    titles: 'CMO, VP Marketing',
+  });
+  assert.match(block, /^<!-- career-ops-template\n/);
+  assert.match(block, /name: Executive Authority\n/);
+  assert.match(block, /titles: CMO, VP Marketing\n/);
+  assert.doesNotMatch(serializeMeta({ name: 'X' }), /description:/);
+});
+
+test('applyMeta: inserts header when absent, round-trips with parseMeta', () => {
+  const dir = fixtureDir();
+  const f = join(dir, 'cv-template.themed.html');
+  writeFileSync(f, '{{NAME}}{{EXPERIENCE}}{{EDUCATION}}');
+  applyMeta(f, { name: 'Themed', version: '2.0.0', titles: 'CMO' });
+  const meta = parseMeta(f);
+  assert.equal(meta.name, 'Themed');
+  assert.equal(meta.version, '2.0.0');
+  assert.equal(meta.titles, 'CMO');
+  assert.ok(readFileSync(f, 'utf-8').includes('{{NAME}}'), 'body preserved');
+});
+
+test('applyMeta: replaces an existing header, not duplicates it', () => {
+  const dir = fixtureDir();
+  const f = join(dir, 'cv-template.executive-authority.html');
+  applyMeta(f, { name: 'Renamed' });
+  const text = readFileSync(f, 'utf-8');
+  assert.equal((text.match(/career-ops-template/g) || []).length, 1);
+  assert.equal(parseMeta(f).name, 'Renamed');
 });
