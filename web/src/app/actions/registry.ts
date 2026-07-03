@@ -45,6 +45,9 @@ export type ActionCtx = {
   applyExplore?: (patch: Record<string, unknown>, opts?: { merge?: boolean; run?: boolean }) => void; // build a FREE discovery search
   writeProfile?: (patch: Record<string, unknown>) => void; // merge-safe config/profile.yml write
   writePortals?: (roles: string[], location?: string[]) => void; // merge-safe portals.yml title_filter write
+  writeTemplateDefault?: (kind: "cv" | "cover", name: string) => void; // POST /api/templates/default
+  assignTemplate?: (n: string, kind: "cv" | "cover", name: string | null) => void; // POST /api/templates/assign
+  pickTemplate?: (kind: "cv" | "cover", name: string) => void; // explicit this-run pick (precedence step 1)
 };
 
 export type ProfilePatch = {
@@ -340,6 +343,56 @@ const ACTIONS: Record<string, ActionDef> = {
           return { note: "Scan targets updated." };
         },
       };
+    },
+  },
+
+  // Set the profile default CV/cover template (confirm-gated write to profile.yml).
+  setDefaultTemplate: {
+    sideEffect: "write",
+    run: (raw, ctx) => {
+      const kind = raw.kind === "cover" ? "cover" : "cv";
+      const name = String(raw.name ?? "").trim();
+      if (!name) return { status: "ignored", note: "no template name" };
+      return {
+        status: "confirm",
+        summary: `Set the default ${kind} template to ${name}?`,
+        run: () => {
+          ctx.writeTemplateDefault?.(kind, name);
+          return { note: `Default ${kind} template = ${name}.` };
+        },
+      };
+    },
+  },
+
+  // Assign (or clear) a template for a specific application (per-job sidecar).
+  assignTemplate: {
+    sideEffect: "write",
+    run: (raw, ctx) => {
+      const n = String(raw.n ?? "").trim();
+      const kind = raw.kind === "cover" ? "cover" : "cv";
+      const name = raw.name == null ? null : String(raw.name).trim() || null;
+      if (!n) return { status: "ignored", note: "no application number" };
+      const label = name ?? "default";
+      return {
+        status: "confirm",
+        summary: `Use the ${label} ${kind} template for application #${n}?`,
+        run: () => {
+          ctx.assignTemplate?.(n, kind, name);
+          return { note: `#${n} ${kind} template = ${label}.` };
+        },
+      };
+    },
+  },
+
+  // Set the explicit this-run pick for the next generation (precedence step 1).
+  pickTemplate: {
+    sideEffect: "none",
+    run: (raw, ctx) => {
+      const kind = raw.kind === "cover" ? "cover" : "cv";
+      const name = String(raw.name ?? "").trim();
+      if (!name) return { status: "ignored", note: "no template name" };
+      ctx.pickTemplate?.(kind, name);
+      return { status: "done", note: `Next ${kind} generation uses ${name}.` };
     },
   },
 };

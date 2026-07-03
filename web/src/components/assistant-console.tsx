@@ -151,6 +151,9 @@ export function AssistantConsole() {
   exploreRef.current = explore;
   const handledRef = useRef<Set<string>>(new Set());
   const confirmRuns = useRef<Map<string, () => DoneInfo>>(new Map());
+  // Explicit this-run template pick (precedence step 1), set by the pickTemplate
+  // action and read when the next CV/cover generation starts.
+  const templatePickRef = useRef<{ cv?: string; cover?: string }>({});
 
   // selected CLI from Config (reacts to changes in other tabs)
   useEffect(() => {
@@ -273,6 +276,17 @@ export function AssistantConsole() {
       },
       writePortals: (roles, location) => {
         fetch("/api/portals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roles, location }) }).catch(() => {});
+      },
+      writeTemplateDefault: (kind, name) => {
+        fetch("/api/templates/default", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, name }) })
+          .then(() => router.refresh())
+          .catch(() => {});
+      },
+      assignTemplate: (n, kind, name) => {
+        fetch("/api/templates/assign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n, kind, name }) }).catch(() => {});
+      },
+      pickTemplate: (kind, name) => {
+        templatePickRef.current = { ...templatePickRef.current, [kind]: name };
       },
     };
   }
