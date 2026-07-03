@@ -849,7 +849,7 @@ const expectedModes = [
   '_shared.md', '_profile.template.md', 'oferta.md', 'pdf.md', 'scan.md',
   'batch.md', 'apply.md', 'auto-pipeline.md', 'contacto.md', 'deep.md',
   'ofertas.md', 'pipeline.md', 'project.md', 'tracker.md', 'training.md',
-  'interview.md', 'latex.md', 'add.md',
+  'interview.md', 'latex.md', 'docx.md', 'add.md',
   'regional/eu-swe.md',
 ];
 
@@ -879,6 +879,11 @@ for (const skillPath of ['.claude/skills/career-ops/SKILL.md', '.agents/skills/c
     pass(`${skillPath} exposes /career-ops latex in discovery menu`);
   } else {
     fail(`${skillPath} does not expose /career-ops latex in discovery menu`);
+  }
+  if (skill.includes('/career-ops docx')) {
+    pass(`${skillPath} exposes /career-ops docx in discovery menu`);
+  } else {
+    fail(`${skillPath} does not expose /career-ops docx in discovery menu`);
   }
 }
 
@@ -11146,6 +11151,115 @@ try {
   else fail('parseArticles should return [] for markup with no articles');
 } catch (e) {
   fail(`avature provider tests crashed: ${e.message}`);
+}
+
+// ── DOCX CV EXPORT ──────────────────────────────────────────────
+
+console.log('\n40. DOCX CV export (generate-docx.mjs)');
+
+try {
+  const { parseCvMarkdown, buildCvDocxBuffer } =
+    await import(pathToFileURL(join(ROOT, 'generate-docx.mjs')).href);
+
+  const fixturePath = join(ROOT, 'examples', 'cv-fractional-example.md');
+  if (!existsSync(fixturePath)) {
+    fail('DOCX: examples/cv-fractional-example.md fixture is missing');
+  } else {
+    const md = readFileSync(fixturePath, 'utf-8');
+
+    // --- Hierarchy parsing ---
+    const cv = parseCvMarkdown(md);
+    if (cv.name === 'Jordan Vale') pass('DOCX: H1 parsed as name (label stripped)');
+    else fail(`DOCX: expected name "Jordan Vale", got "${cv.name}"`);
+
+    const titles = cv.sections.map((s) => s.title);
+    const wantSections = ['Professional Summary', 'Experience', 'Selected Projects', 'Education', 'Skills'];
+    if (wantSections.every((t) => titles.includes(t))) pass('DOCX: ## sections parsed in order');
+    else fail(`DOCX: sections mismatch — got ${titles.join(', ')}`);
+
+    // --- Nested sub-role rendering (the fractional / umbrella convention) ---
+    const exp = cv.sections.find((s) => s.title === 'Experience');
+    const umbrella = exp && exp.blocks.find((b) => b.type === 'entry' && /Vale Advisory/.test(b.company));
+    if (umbrella && umbrella.subroles.length === 3) {
+      pass('DOCX: #### sub-roles nest under their parent ### (3 engagements under one umbrella)');
+    } else {
+      fail(`DOCX: expected 3 nested sub-roles under the umbrella, got ${umbrella ? umbrella.subroles.length : 'no umbrella entry'}`);
+    }
+    const firstSub = umbrella && umbrella.subroles[0];
+    if (firstSub && /NorthStar Analytics/.test(firstSub.title) && firstSub.date === '2023-2024' && firstSub.bullets.length === 3) {
+      pass('DOCX: nested sub-role keeps its own title, date, and bullets');
+    } else {
+      fail('DOCX: nested sub-role did not retain title/date/bullets');
+    }
+
+    // --- Standard-role rendering: a ### with no #### children ---
+    const standard = exp && exp.blocks.find((b) => b.type === 'entry' && /Brightpath/.test(b.company));
+    if (standard && standard.subroles.length === 0 && standard.role && standard.date && standard.bullets.length === 3) {
+      pass('DOCX: a ### with no #### renders as an ordinary role (no nesting)');
+    } else {
+      fail('DOCX: standard (non-nested) role entry parsed incorrectly');
+    }
+
+    // --- Structural + 2-page sanity on the rendered .docx ---
+    const buffer = await buildCvDocxBuffer(md, { format: 'letter' });
+    if (buffer && buffer.length > 2000 && buffer[0] === 0x50 && buffer[1] === 0x4b) {
+      pass('DOCX: output is a valid .docx (ZIP/OOXML) buffer');
+    } else {
+      fail('DOCX: output buffer is not a valid ZIP/OOXML file');
+    }
+
+    // Inspect the rendered XML. A .docx never stores a rendered page count
+    // (Word paginates at open time), so the "2-page" check is a content-volume
+    // sanity, not an exact page assertion. Needs `unzip`; degrade to a warning
+    // if it is unavailable so the suite stays green in minimal environments.
+    let documentXml = null;
+    let stylesXml = null;
+    try {
+      const dir = mkdtempSync(join(tmpdir(), 'docx-test-'));
+      const f = join(dir, 'cv.docx');
+      writeFileSync(f, buffer);
+      try {
+        documentXml = execFileSync('unzip', ['-p', f, 'word/document.xml'], { encoding: 'utf-8', timeout: 15000 });
+        stylesXml = execFileSync('unzip', ['-p', f, 'word/styles.xml'], { encoding: 'utf-8', timeout: 15000 });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    } catch {
+      warn('DOCX: `unzip` unavailable — skipped rendered-XML structural checks');
+    }
+
+    if (documentXml) {
+      if (/w:pgSz[^>]*w:w="12240"[^>]*w:h="15840"/.test(documentXml)) {
+        pass('DOCX: section sets explicit US Letter page size (12240x15840 twips)');
+      } else {
+        fail('DOCX: explicit Letter page size missing from section properties');
+      }
+
+      const subRoleUses = (documentXml.match(/w:val="SubRole"/g) || []).length;
+      if (subRoleUses === 3) pass('DOCX: nested sub-roles render with the distinct SubRole style (x3)');
+      else fail(`DOCX: expected 3 SubRole-styled paragraphs, found ${subRoleUses}`);
+
+      if (/<w:ilvl w:val="1"\/>/.test(documentXml)) pass('DOCX: sub-role bullets render one list level deeper (ilvl=1)');
+      else fail('DOCX: no deeper-level (ilvl=1) bullets found for nested sub-roles');
+
+      if (documentXml.includes('NorthStar Analytics')) pass('DOCX: sub-role heading text is present in the document body');
+      else fail('DOCX: sub-role heading text missing from document body');
+
+      const paraCount = (documentXml.match(/<w:p[ >]/g) || []).length;
+      if (paraCount >= 20 && paraCount <= 400) pass(`DOCX: paragraph volume is 2-page-sane (${paraCount} paragraphs)`);
+      else fail(`DOCX: paragraph count ${paraCount} outside the sane 20-400 band`);
+    }
+
+    if (stylesXml) {
+      if (/w:styleId="SubRole"/.test(stylesXml) && /w:val="right"/.test(stylesXml)) {
+        pass('DOCX: SubRole style and right-flush date tab stop are defined');
+      } else {
+        fail('DOCX: SubRole style or right tab stop missing from styles.xml');
+      }
+    }
+  }
+} catch (e) {
+  fail(`DOCX export tests crashed: ${e.message}`);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────

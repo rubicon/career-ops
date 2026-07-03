@@ -99,6 +99,7 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 | `templates/cv-template.tex` | LaTeX/Overleaf template for CVs |
 | `generate-pdf.mjs` | Playwright: HTML to PDF |
 | `generate-latex.mjs` | LaTeX CV validator + pdflatex compiler |
+| `generate-docx.mjs` | Word (.docx) CV exporter from cv.md (honors #### sub-role nesting) |
 | `article-digest.md` | Compact proof points from portfolio (optional) |
 | `interview-prep/story-bank.md` | Accumulated STAR+R stories across evaluations |
 | `interview-prep/{company}-{role}.md` | Company-specific interview intel reports |
@@ -128,6 +129,7 @@ You can invoke the command center or any of its modes directly within your CLI:
 * `tracker` — Show application status overview
 * `pdf` — Generate ATS-optimized CV PDF
 * `latex` — Export CV as LaTeX/Overleaf .tex
+* `docx` — Export CV as an editable Word .docx
 * `cover` — Generate cover letter
 * `interview-prep` — Generate interview preparation guide
 * `interview` — Onboarding/on-demand interview
@@ -266,6 +268,7 @@ Default modes are in `modes/` (English). Language-specific modes live in `modes/
 | Wants to run practice interview questions with feedback | `interview/practice` |
 | Wants to debrief after a real interview and close gaps | `interview/debrief` |
 | Wants to generate CV/PDF | `pdf` |
+| Wants an editable Word (.docx) CV | `docx` |
 | Evaluates a course/cert | `training` |
 | Evaluates portfolio project | `project` |
 | Asks about application status | `tracker` |

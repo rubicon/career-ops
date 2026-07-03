@@ -4,7 +4,7 @@ description: AI job search command center -- evaluate offers, generate CVs, scan
 arguments: mode
 user_invocable: true
 user-invocable: true
-argument-hint: "[scan | deep | pdf | latex | cover | add | eu-swe | oferta | ofertas | apply | batch | tracker | agent-inbox | pipeline | contacto | training | project | interview-prep | interview | interview/plan | interview/practice | interview/debrief | patterns | followup | update]"
+argument-hint: "[scan | deep | pdf | latex | docx | cover | add | eu-swe | oferta | ofertas | apply | batch | tracker | agent-inbox | pipeline | contacto | training | project | interview-prep | interview | interview/plan | interview/practice | interview/debrief | patterns | followup | update]"
 license: MIT
 ---
 
@@ -49,6 +49,7 @@ Determine the mode from `$mode`:
 | `interview/debrief` | `interview/debrief` |
 | `pdf` | `pdf` |
 | `latex` | `latex` |
+| `docx` | `docx` |
 | `training` | `training` |
 | `project` | `project` |
 | `tracker` | `tracker` |
@@ -104,6 +105,7 @@ Available commands:
   /career-ops interview/debrief → Post-interview debrief: close gaps, predict next round
   /career-ops pdf       → PDF only, ATS-optimized CV
   /career-ops latex     → Export CV as LaTeX/Overleaf .tex
+  /career-ops docx      → Export CV as an editable Word .docx
   /career-ops cover     → Cover letter: standalone JD paste or /career-ops cover {slug}
   /career-ops add       → Add a project/paper/role to your CV (fetch + preview + confirm)
   /career-ops training  → Evaluate course/cert against North Star
@@ -135,7 +137,7 @@ Applies to: `auto-pipeline`, `oferta`, `ofertas`, `pdf`, `contacto`, `apply`, `p
 ### Standalone modes (only their mode file):
 Read `modes/{mode}.md`
 
-Applies to: `tracker`, `agent-inbox`, `deep`, `interview-prep`, `interview`, `regional/eu-swe`, `interview/plan`, `interview/practice`, `interview/debrief`, `latex`, `training`, `project`, `patterns`, `followup`, `cover`, `add`
+Applies to: `tracker`, `agent-inbox`, `deep`, `interview-prep`, `interview`, `regional/eu-swe`, `interview/plan`, `interview/practice`, `interview/debrief`, `latex`, `docx`, `training`, `project`, `patterns`, `followup`, `cover`, `add`
 
 ### Modes delegated to subagent:
 For `scan`, `apply` (with Playwright), and `pipeline` (3+ URLs): launch as a worker/subagent with the content of `_shared.md` + `modes/{mode}.md` injected into the worker prompt. If your CLI exposes an `Agent(...)` primitive, the call looks like this:

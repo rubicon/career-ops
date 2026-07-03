@@ -104,6 +104,7 @@ Built by someone who used it to evaluate 740+ job offers, generate 100+ tailored
 | **Interview Story Bank** | Accumulates STAR+Reflection stories across evaluations -- 5-10 master stories that answer any behavioral question                        |
 | **Negotiation Scripts**  | Salary negotiation frameworks, geographic discount pushback, competing offer leverage                                                    |
 | **ATS PDF Generation**   | Keyword-injected CVs with Space Grotesk + DM Sans design                                                                                 |
+| **Multi-format CV Export** | The same tailored CV as a PDF ([`pdf`](modes/pdf.md)), a LaTeX/Overleaf `.tex` ([`latex`](modes/latex.md)), or an editable Word `.docx` ([`docx`](modes/docx.md)). The `.docx` export reads `cv.md` directly and honors its heading hierarchy, including `####` nested sub-roles for fractional / interim / umbrella work |
 | **Cover Letter Generator** | Research-backed cover letters with keyword mirroring, four interactive angle prompts (why/problems/approach/tone), draft-in-chat approval gate, and A4 PDF via the same HTML + Playwright pipeline as CVs. Auto-drafts on every evaluation; complete and generate on demand via `/career-ops cover` |
 | **Portal Scanner**       | 45+ companies pre-configured (Anthropic, OpenAI, ElevenLabs, Retool, n8n...) + custom queries across Ashby, Greenhouse, Lever, Wellfound |
 | **Batch Processing**     | Parallel evaluation with headless CLI workers (`claude -p` / `opencode run`)                                                             |
@@ -314,6 +315,21 @@ You paste a job URL or description
  Report  PDF  Tracker
   .md   .pdf   .tsv
 ```
+
+### Authoring your `cv.md`
+
+`cv.md` is plain Markdown, and the heading levels carry meaning that the exporters read:
+
+| Heading | Meaning |
+| ------- | ------- |
+| `# Name` | Your name (a leading "CV" / "Resume" label is stripped) |
+| `## Section` | A CV section: Professional Summary, Experience, Education, Skills, ... |
+| `### Company` | A role or company entry within a section |
+| `#### Sub-role` | A nested sub-role beneath its parent `###` company or umbrella |
+
+Under a heading, a bold line (`**Senior Engineer**`) is read as the role/title, a short line that looks like a date range (`2021-Present`) becomes the right-flushed date, and `-` bullets are the achievements.
+
+The `####` level is how you represent **fractional, interim, and umbrella work** — an advisory or consulting practice (`###`) with several distinct client engagements (`####`) underneath it, instead of flattening those engagements into separate jobs. The Word `.docx` export ([`docx`](modes/docx.md)) renders each `####` as a nested sub-role under its parent. There is a runnable, non-personal example at [`examples/cv-fractional-example.md`](examples/cv-fractional-example.md). A `###` with no `####` children renders as an ordinary role.
 
 ## Pre-configured Portals
 

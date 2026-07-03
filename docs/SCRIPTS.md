@@ -12,6 +12,7 @@ All scripts live in the project root as `.mjs` modules and are exposed via `npm 
 | `npm run dedup` | `dedup-tracker.mjs` | Remove duplicate tracker entries |
 | `npm run merge` | `merge-tracker.mjs` | Merge batch TSVs into applications.md |
 | `npm run pdf` | `generate-pdf.mjs` | Convert HTML to ATS-optimized PDF |
+| `npm run docx` | `generate-docx.mjs` | Generate an editable Word .docx from cv.md |
 | `npm run build:latex` | `build-cv-latex.mjs` | Build .tex from structured JSON payload |
 | `npm run sync-check` | `cv-sync-check.mjs` | Validate CV/profile consistency |
 | `npm run patterns` | `analyze-patterns.mjs` | Analyze tracker outcomes and report patterns |
@@ -125,6 +126,22 @@ npm run pdf -- input.html output.pdf --format=a4        # A4 (default)
 ```
 
 **Exit codes:** `0` PDF generated, `1` missing arguments or generation failure.
+
+---
+
+## docx
+
+Generates an editable Microsoft Word `.docx` directly from a Markdown CV (`cv.md`). Single-column, Word-safe fonts, no theme or color. Honors the CV heading hierarchy: `##` sections, `###` company/role entries, and `####` nested sub-roles (the fractional / interim / umbrella convention — see `modes/docx.md`). Dates are right-flushed via a tab stop; bullets use real Word list numbering, one level deeper under a sub-role.
+
+```bash
+npm run docx -- input.md output.docx
+npm run docx -- input.md output.docx --format=letter   # US letter
+npm run docx -- input.md output.docx --format=a4        # A4 (default)
+```
+
+A runnable, non-personal example CV lives at `examples/cv-fractional-example.md`.
+
+**Exit codes:** `0` DOCX generated, `1` missing/invalid arguments or generation failure.
 
 ---
 

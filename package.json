@@ -16,6 +16,7 @@
     "merge": "node merge-tracker.mjs",
     "reconcile": "node reconcile-pipeline.mjs",
     "pdf": "node generate-pdf.mjs",
+    "docx": "node generate-docx.mjs",
     "cover-letter": "node generate-cover-letter.mjs --payload",
     "sync-check": "node cv-sync-check.mjs",
     "update:check": "node update-system.mjs check",
@@ -63,6 +64,7 @@
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "docx": "^9.7.1",
     "dotenv": "^17.0.0",
     "js-yaml": "^4.1.1",
     "playwright": "1.61.1"
