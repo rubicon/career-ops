@@ -60,10 +60,13 @@ try {
 
   writeFileSync(tracker, HEADER + CLEAN_ROW, 'utf-8');
   const clean = runVp();
-  if (/No control characters in tracker cells/.test(clean.stdout) && !/control character\(s\)/.test(clean.stdout)) {
-    pass('control: the same row without the byte reports clean and raises nothing');
+  // Exit 0 as well as the success line: the line alone would still print if the
+  // byte were reported by some other check, which is the false negative this
+  // control exists to rule out.
+  if (/No control characters in tracker cells/.test(clean.stdout) && !/control character\(s\)/.test(clean.stdout) && clean.status === 0) {
+    pass('control: the same row without the byte reports clean, raises nothing and exits 0');
   } else {
-    fail(`control drifted:\n${clean.stdout.split('\n').filter((l) => /control|Pipeline Health/i.test(l)).join('\n')}`);
+    fail(`control drifted: exit=${clean.status}\n${clean.stdout.split('\n').filter((l) => /control|Pipeline Health/i.test(l)).join('\n')}`);
   }
 } catch (err) {
   fail(`verify-pipeline Check 16 tests could not run: ${err.message}`);

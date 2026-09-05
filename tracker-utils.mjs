@@ -84,8 +84,13 @@ export function normalizeCompany(name) {
  * C0 and DEL and C1, minus the three whitespace controls: `\t` is ordinary
  * whitespace inside a cell, and `\r`/`\n` are folded to a single space by
  * cell() before this runs — stripping any of the three would glue words
- * together instead of separating them. Same class the plugin token/display
- * sanitizer uses, named the same way, so the two cannot drift apart.
+ * together instead of separating them.
+ *
+ * Deliberately NOT shared with the plugin token/display sanitizer, which strips
+ * the same idea but a different range: it collapses all whitespace first and so
+ * can take `\t`/`\r`/`\n` with the rest, which here would destroy word breaks.
+ * Two ranges that must differ are two constants; only the ranges that must
+ * agree are shared, which is the single export below.
  *
  * Exported because verify-pipeline.mjs has to recognize exactly what cell()
  * removes: stripping only stops NEW bytes entering, and a second copy of this
