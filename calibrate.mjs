@@ -38,9 +38,16 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { parseTrackerRow, resolveColumns, isSeparatorRow, isHeaderRow } from './tracker-parse.mjs';
 import { resolveTrackerPath, resolveWorkspaceRoot } from './tracker-utils.mjs';
+import { getCareerOpsRoot } from './path-resolver.mjs';
 import { canonicalOutcome } from './lib/outcome-types.mjs';
+import { outcomeDirsFor } from './lib/outcome-dir.mjs';
 
-const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
+// The USER's data root, not this file's directory. It was __dirname under the
+// name CAREER_OPS, so resolveTrackerPath() looked inside the checkout and a user
+// with CAREER_OPS_ROOT (or a .career-ops-data marker) got "No tracker found ...
+// nothing to calibrate yet" — which reads as "you have no outcome data",
+// exactly the thing this advisory is meant to answer.
+const DATA_ROOT = getCareerOpsRoot();
 
 // --- Outcome semantics ---------------------------------------------------
 //
@@ -211,10 +218,18 @@ export function computeCalibration(rows, journals, opts = {}) {
 
 // --- Filesystem assembly --------------------------------------------------
 
-function loadTrackerRows(appsFile) {
+export function loadTrackerRows(appsFile) {
   const lines = readFileSync(appsFile, 'utf-8').split(/\r?\n/);
-  const headerLine = lines.find((l) => isHeaderRow(l));
-  const colmap = headerLine ? resolveColumns(headerLine) : undefined;
+  // resolveColumns() takes the LINE ARRAY and locates the header itself.
+  // Passing it a single header string made detectColumns() iterate that
+  // string character by character, find no header, and fall back to
+  // LEGACY_COLMAP — the 9-column order with no Via column. On a tracker that
+  // HAS Via (#1596), where the column sits between Company and Role, every
+  // field from `role` onward then reads one column to the left: `status`
+  // reads the score cell ("4.5/5"), no status matches, and every row silently
+  // drops out of the population. The report renders 0 resolved / 0 in-flight
+  // and a false "insufficient data" verdict on a tracker full of outcomes.
+  const colmap = resolveColumns(lines);
   const rows = [];
   for (const line of lines) {
     if (!line.trim().startsWith('|') || isHeaderRow(line) || isSeparatorRow(line)) continue;
@@ -233,14 +248,30 @@ function loadJournals(workspaceRoot) {
   const journals = new Map();
   const dir = join(workspaceRoot, 'data', 'outcomes');
   if (!existsSync(dir)) return journals;
+
+  // Collect the tracker numbers present, then resolve each ONE directory.
+  // Directory shape is {num}_{company_slug}_{role_slug} (outcome.mjs), and a
+  // row can have more than one: before the slug was pinned, editing the
+  // tracker's Role cell between two recordings started a second directory and
+  // split the append-only journal in half. Iterating entries and calling
+  // journals.set() per directory meant whichever sorted last won — so which
+  // half of the history calibration saw came down to alphabetical order.
+  // outcomeDirsFor() puts the most recently written journal first.
+  const nums = new Set();
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    // Directory shape is {num}_{company_slug}_{role_slug} (outcome.mjs).
     const numMatch = entry.name.match(/^(\d+)_/);
-    if (!numMatch) continue;
-    const logPath = join(dir, entry.name, 'outcome.md');
-    if (!existsSync(logPath)) continue;
-    journals.set(parseInt(numMatch[1], 10), parseOutcomeJournal(readFileSync(logPath, 'utf-8')));
+    if (numMatch) nums.add(parseInt(numMatch[1], 10));
+  }
+  for (const num of nums) {
+    const dirs = outcomeDirsFor(dir, num);
+    const logPath = dirs.length ? join(dir, dirs[0], 'outcome.md') : null;
+    if (!logPath || !existsSync(logPath)) continue;
+    const journal = parseOutcomeJournal(readFileSync(logPath, 'utf-8'));
+    // A split is reported rather than silently resolved: repairing it means
+    // moving a user's recorded artifacts, which a read-only report must not do.
+    if (dirs.length > 1) journal.splitAcross = dirs;
+    journals.set(num, journal);
   }
   return journals;
 }
@@ -262,10 +293,14 @@ export function loadLedgerReached(workspaceRoot) {
   for (const line of readFileSync(logPath, 'utf-8').split(/\r?\n/)) {
     if (!line.trim()) continue;
     const c = line.split('\t');
-    const num = parseInt(c[0], 10);
-    if (!Number.isFinite(num)) continue;
-    const from = String(c[2] || '').trim().toLowerCase();
-    const to = String(c[3] || '').trim().toLowerCase();
+    const rawNum = String(c[0] || '').trim();
+    const date = String(c[1] || '').trim();
+    const rawFrom = String(c[2] || '').trim();
+    const rawTo = String(c[3] || '').trim();
+    if (!/^\d+$/.test(rawNum) || !date || !rawFrom || !rawTo) continue;
+    const num = Number(rawNum);
+    const from = rawFrom.toLowerCase();
+    const to = rawTo.toLowerCase();
     const cur = reached.get(num) || { reachedInterview: false, reachedOffer: false };
     if (INTERVIEW_PLUS.has(from) || INTERVIEW_PLUS.has(to)) cur.reachedInterview = true;
     if (OFFER_PLUS.has(from) || OFFER_PLUS.has(to)) { cur.reachedOffer = true; cur.reachedInterview = true; }
@@ -411,7 +446,7 @@ if (isMainModule(import.meta.url)) {
     console.error('--min-band-n must be a positive integer');
     process.exit(2);
   }
-  const appsFile = resolveTrackerPath(CAREER_OPS);
+  const appsFile = resolveTrackerPath(DATA_ROOT);
   if (!existsSync(appsFile)) {
     console.error(`No tracker found at ${appsFile} — nothing to calibrate yet.`);
     process.exit(1);
