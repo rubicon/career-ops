@@ -17,19 +17,20 @@ type Catalog struct {
 	LoadingPreview string
 
 	// Tabs & filters
-	TabAll       string
-	TabEvaluated string
-	TabApplied   string
-	TabInterview string
-	TabResponded string
-	TabTop       string
-	TabSkip      string
-	TabRejected  string
-	TabDiscarded string
+	TabAll        string
+	TabEvaluated  string
+	TabApplied    string
+	TabInterview  string
+	TabResponded  string
+	TabAssessment string
+	TabTop        string
+	TabSkip       string
+	TabRejected   string
+	TabDiscarded  string
 
 	// Table column headers
 	ColFit      string
-	ColApplied  string
+	ColDate     string
 	ColCompany  string
 	ColRole     string
 	ColStatus   string
@@ -100,15 +101,16 @@ type Catalog struct {
 	TimeDaysAgo   string
 
 	// Status display names
-	StatusEvaluated string
-	StatusApplied   string
-	StatusResponded string
-	StatusInterview string
-	StatusOffer     string
-	StatusRejected  string
-	StatusDiscarded string
-	StatusSkip      string
-	StatusHired     string
+	StatusEvaluated  string
+	StatusApplied    string
+	StatusResponded  string
+	StatusAssessment string
+	StatusInterview  string
+	StatusOffer      string
+	StatusRejected   string
+	StatusDiscarded  string
+	StatusSkip       string
+	StatusHired      string
 
 	// Additional UI strings
 	NoData        string
@@ -168,6 +170,7 @@ type Catalog struct {
 	SortLocation string
 	SortPay      string
 	SortLast     string
+	SortPosted   string
 	ViewGrouped  string
 	ViewFlat     string
 }
@@ -189,6 +192,8 @@ func (c *Catalog) SortModeLabel(mode string) string {
 		return c.SortPay
 	case "last":
 		return c.SortLast
+	case "posted":
+		return c.SortPosted
 	default:
 		return mode
 	}
@@ -207,8 +212,8 @@ func (c *Catalog) ViewModeLabel(mode string) string {
 }
 
 // StatusLabel returns the localized display label for a canonical status ID
-// (interview, offer, hired, responded, applied, evaluated, skip, rejected,
-// discarded).
+// (interview, offer, hired, responded, assessment, applied, evaluated, skip,
+// rejected, discarded).
 func (c *Catalog) StatusLabel(norm string) string {
 	switch strings.ToLower(strings.TrimSpace(norm)) {
 	case "interview":
@@ -219,6 +224,8 @@ func (c *Catalog) StatusLabel(norm string) string {
 		return c.StatusHired
 	case "responded":
 		return c.StatusResponded
+	case "assessment":
+		return c.StatusAssessment
 	case "applied":
 		return c.StatusApplied
 	case "evaluated":
@@ -292,19 +299,20 @@ var En = Catalog{
 	LoadingPreview: "Loading preview...",
 
 	// Tabs & filters
-	TabAll:       "ALL",
-	TabEvaluated: "EVALUATED",
-	TabApplied:   "APPLIED",
-	TabInterview: "INTERVIEW",
-	TabResponded: "RESPONDED",
-	TabTop:       "TOP ≥4",
-	TabSkip:      "SKIP",
-	TabRejected:  "REJECTED",
-	TabDiscarded: "DISCARDED",
+	TabAll:        "ALL",
+	TabEvaluated:  "EVALUATED",
+	TabApplied:    "APPLIED",
+	TabInterview:  "INTERVIEW",
+	TabResponded:  "RESPONDED",
+	TabAssessment: "ASSESSMENT",
+	TabTop:        "TOP ≥4",
+	TabSkip:       "SKIP",
+	TabRejected:   "REJECTED",
+	TabDiscarded:  "DISCARDED",
 
 	// Table column headers
 	ColFit:      "FIT",
-	ColApplied:  "APPLIED",
+	ColDate:     "DATE",
 	ColCompany:  "COMPANY",
 	ColRole:     "ROLE",
 	ColStatus:   "STATUS",
@@ -328,7 +336,7 @@ var En = Catalog{
 
 	// Progress screen
 	ProgressTitle:   "SEARCH PROGRESS",
-	ProgressSummary: "%d evaluated | %.1f avg score",
+	ProgressSummary: "%d tracked | %.1f avg score",
 	FunnelTitle:     "Pipeline Funnel",
 	ScoresTitle:     "Score Distribution",
 	RatesTitle:      "Conversion Rates",
@@ -375,15 +383,16 @@ var En = Catalog{
 	TimeDaysAgo:   "%dd ago",
 
 	// Status display names
-	StatusEvaluated: "Evaluated",
-	StatusApplied:   "Applied",
-	StatusResponded: "Responded",
-	StatusInterview: "Interview",
-	StatusOffer:     "Offer",
-	StatusRejected:  "Rejected",
-	StatusDiscarded: "Discarded",
-	StatusSkip:      "SKIP",
-	StatusHired:     "Hired",
+	StatusEvaluated:  "Evaluated",
+	StatusApplied:    "Applied",
+	StatusResponded:  "Responded",
+	StatusAssessment: "Assessment",
+	StatusInterview:  "Interview",
+	StatusOffer:      "Offer",
+	StatusRejected:   "Rejected",
+	StatusDiscarded:  "Discarded",
+	StatusSkip:       "SKIP",
+	StatusHired:      "Hired",
 
 	// Additional UI strings
 	NoData:        "No data",
@@ -443,6 +452,7 @@ var En = Catalog{
 	SortLocation: "location",
 	SortPay:      "pay",
 	SortLast:     "last",
+	SortPosted:   "posted",
 	ViewGrouped:  "grouped",
 	ViewFlat:     "flat",
 }
@@ -456,19 +466,20 @@ var Tr = Catalog{
 	LoadingPreview: "Önizleme yükleniyor...",
 
 	// Tabs & filters
-	TabAll:       "TÜMÜ",
-	TabEvaluated: "DEĞERLENDİRİLDİ",
-	TabApplied:   "BAŞVURULDU",
-	TabInterview: "MÜLAKAT",
-	TabResponded: "YANIT VERİLDİ",
-	TabTop:       "EN İYİ ≥4",
-	TabSkip:      "UYGUN DEĞİL",
-	TabRejected:  "REDDEDİLDİ",
-	TabDiscarded: "İPTAL",
+	TabAll:        "TÜMÜ",
+	TabEvaluated:  "DEĞERLENDİRİLDİ",
+	TabApplied:    "BAŞVURULDU",
+	TabInterview:  "MÜLAKAT",
+	TabResponded:  "YANIT VERİLDİ",
+	TabAssessment: "DEĞERLENDİRME",
+	TabTop:        "EN İYİ ≥4",
+	TabSkip:       "UYGUN DEĞİL",
+	TabRejected:   "REDDEDİLDİ",
+	TabDiscarded:  "İPTAL",
 
 	// Table column headers
 	ColFit:      "UYUM",
-	ColApplied:  "TARİH",
+	ColDate:     "TARİH",
 	ColCompany:  "ŞİRKET",
 	ColRole:     "POZİSYON",
 	ColStatus:   "DURUM",
@@ -492,7 +503,7 @@ var Tr = Catalog{
 
 	// Progress screen
 	ProgressTitle:   "TAKİP İLERLEMESİ",
-	ProgressSummary: "%d değerlendirildi | %.1f ort. puan",
+	ProgressSummary: "%d takipte | %.1f ort. puan",
 	FunnelTitle:     "Pipeline Hunisi",
 	ScoresTitle:     "Puan Dağılımı",
 	RatesTitle:      "Dönüşüm Oranları",
@@ -539,15 +550,16 @@ var Tr = Catalog{
 	TimeDaysAgo:   "%d gün önce",
 
 	// Status display names
-	StatusEvaluated: "Değerlendirildi",
-	StatusApplied:   "Başvuruldu",
-	StatusResponded: "Yanıt Verildi",
-	StatusInterview: "Mülakat",
-	StatusOffer:     "Teklif",
-	StatusRejected:  "Reddedildi",
-	StatusDiscarded: "İptal Edildi",
-	StatusSkip:      "Uygun Değil",
-	StatusHired:     "İşe Alındı",
+	StatusEvaluated:  "Değerlendirildi",
+	StatusApplied:    "Başvuruldu",
+	StatusResponded:  "Yanıt Verildi",
+	StatusAssessment: "Değerlendirme",
+	StatusInterview:  "Mülakat",
+	StatusOffer:      "Teklif",
+	StatusRejected:   "Reddedildi",
+	StatusDiscarded:  "İptal Edildi",
+	StatusSkip:       "Uygun Değil",
+	StatusHired:      "İşe Alındı",
 
 	// Additional UI strings
 	NoData:        "Veri yok",
@@ -607,6 +619,7 @@ var Tr = Catalog{
 	SortLocation: "konum",
 	SortPay:      "ücret",
 	SortLast:     "son",
+	SortPosted:   "yayın",
 	ViewGrouped:  "gruplu",
 	ViewFlat:     "düz",
 }
@@ -620,19 +633,20 @@ var Es = Catalog{
 	LoadingPreview: "Cargando vista previa...",
 
 	// Tabs & filters
-	TabAll:       "TODAS",
-	TabEvaluated: "EVALUADAS",
-	TabApplied:   "APLICADAS",
-	TabInterview: "ENTREVISTA",
-	TabResponded: "RESPONDIDAS",
-	TabTop:       "TOP ≥4",
-	TabSkip:      "OMITIR",
-	TabRejected:  "RECHAZADAS",
-	TabDiscarded: "DESCARTADAS",
+	TabAll:        "TODAS",
+	TabEvaluated:  "EVALUADAS",
+	TabApplied:    "APLICADAS",
+	TabInterview:  "ENTREVISTA",
+	TabResponded:  "RESPONDIDAS",
+	TabAssessment: "PRUEBA",
+	TabTop:        "TOP ≥4",
+	TabSkip:       "OMITIR",
+	TabRejected:   "RECHAZADAS",
+	TabDiscarded:  "DESCARTADAS",
 
 	// Table column headers
 	ColFit:      "AJUSTE",
-	ColApplied:  "APLICADA",
+	ColDate:     "FECHA",
 	ColCompany:  "EMPRESA",
 	ColRole:     "PUESTO",
 	ColStatus:   "ESTADO",
@@ -656,7 +670,7 @@ var Es = Catalog{
 
 	// Progress screen
 	ProgressTitle:   "PROGRESO DE BÚSQUEDA",
-	ProgressSummary: "%d evaluadas | %.1f puntuación media",
+	ProgressSummary: "%d en seguimiento | %.1f puntuación media",
 	FunnelTitle:     "Embudo del proceso",
 	ScoresTitle:     "Distribución de puntuaciones",
 	RatesTitle:      "Tasas de conversión",
@@ -703,15 +717,16 @@ var Es = Catalog{
 	TimeDaysAgo:   "hace %dd",
 
 	// Status display names
-	StatusEvaluated: "Evaluada",
-	StatusApplied:   "Aplicada",
-	StatusResponded: "Respondida",
-	StatusInterview: "Entrevista",
-	StatusOffer:     "Oferta",
-	StatusRejected:  "Rechazada",
-	StatusDiscarded: "Descartada",
-	StatusSkip:      "OMITIR",
-	StatusHired:     "Contratada",
+	StatusEvaluated:  "Evaluada",
+	StatusApplied:    "Aplicada",
+	StatusResponded:  "Respondida",
+	StatusAssessment: "Prueba",
+	StatusInterview:  "Entrevista",
+	StatusOffer:      "Oferta",
+	StatusRejected:   "Rechazada",
+	StatusDiscarded:  "Descartada",
+	StatusSkip:       "OMITIR",
+	StatusHired:      "Contratada",
 
 	// Additional UI strings
 	NoData:        "Sin datos",
@@ -771,6 +786,7 @@ var Es = Catalog{
 	SortLocation: "ubicación",
 	SortPay:      "salario",
 	SortLast:     "último",
+	SortPosted:   "publicado",
 	ViewGrouped:  "agrupado",
 	ViewFlat:     "plano",
 }
