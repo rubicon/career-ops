@@ -115,6 +115,7 @@ try {
   // postings shape: [{ text, hostedUrl, categories: {location}, descriptionPlain, createdAt }].
   const sample = [
     {
+      id: 'lever-posting-1111',
       text: 'Staff Platform Engineer',
       hostedUrl: 'https://jobs.lever.co/acme/1111-staff-platform-engineer',
       categories: { location: 'Remote — Europe', team: 'Platform', commitment: 'Full-time' },
@@ -175,6 +176,14 @@ try {
     fail(`lever.fetch() url=${JSON.stringify(capturedUrl)} opts=${JSON.stringify(capturedOpts)}`);
   }
 
+  // A board-wide feed with inlined descriptions: a large board (jobgether,
+  // 42.8 MB) outgrows the 10s _http.mjs default (#4177).
+  if (capturedOpts?.timeoutMs === 30_000) {
+    pass('lever.fetch() passes the 30s Lever feed timeout, not the 10s default');
+  } else {
+    fail(`lever.fetch() timeoutMs = ${JSON.stringify(capturedOpts?.timeoutMs)}`);
+  }
+
   if (fetched.length === 7)
     pass('lever.fetch() returns one normalized row per posting (no silent drops)');
   else fail(`lever.fetch() returned ${fetched.length} rows (expected 7)`);
@@ -182,10 +191,13 @@ try {
   if (fetched[0]?.title === 'Staff Platform Engineer'
       && fetched[0]?.url === 'https://jobs.lever.co/acme/1111-staff-platform-engineer'
       && fetched[0]?.company === 'Acme'
+      && fetched[0]?.listingIdentity?.ats_provider === 'lever'
+      && fetched[0]?.listingIdentity?.board_slug === 'acme'
+      && fetched[0]?.listingIdentity?.posting_id === 'lever-posting-1111'
       && fetched[0]?.location === 'Remote — Europe'
       && fetched[0]?.description === 'Build the platform that powers everything.'
       && fetched[0]?.postedAt === 1751328000000)
-    pass('lever.fetch() maps text/hostedUrl/entry.name/categories.location/descriptionPlain/createdAt');
+    pass('lever.fetch() maps ATS identity, title/URL/company/location/body/date');
   else fail(`lever.fetch() row 0 = ${JSON.stringify(fetched[0])}`);
 
   if (fetched[1]?.description === '' && fetched[1]?.postedAt === undefined)
