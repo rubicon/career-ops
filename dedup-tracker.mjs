@@ -16,10 +16,11 @@ import { readFileSync, copyFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { getCareerOpsRoot, resolveTrackerPath } from './path-resolver.mjs';
-import { postingUrlRelation } from './url-key.mjs';
+import { postingUrlRelation, normalizeUrl } from './url-key.mjs';
 import {
   openTrackerTransaction, rebuildRow, normalizeCompany, companiesMatchIgnoringCorporateForm,
   MIN_STEM_CHARS, loadCanonicalStates, resolveCanonicalStateId, resolveCanonicalState,
+  resolveWorkspaceRoot, containedReportFile, reportUrlToken,
 } from './tracker-utils.mjs';
 import { resolveColumns, parseTrackerRow, normalizeVia, extractReqNumber, parseScore } from './tracker-parse.mjs';
 import { validateFlags } from './lib/cli-flags.mjs';
@@ -29,6 +30,9 @@ const CAREER_OPS = getCareerOpsRoot();
 // (original). CAREER_OPS_TRACKER lets tests point the script at an isolated
 // fixture so the real user tracker is never touched.
 const APPS_FILE = resolveTrackerPath(CAREER_OPS);
+// Report links resolve against the same root merge-tracker.mjs uses, so the
+// two tools read the same report for the same cell.
+const REPORTS_ROOT = resolveWorkspaceRoot(APPS_FILE);
 
 // ── CLI args ────────────────────────────────────────────────────────
 // Same shape as scan-ats-full.mjs (#1633/PR #1635) and reply-watch.mjs
@@ -209,7 +213,38 @@ function normalizeRole(role) {
  * @returns {boolean} True when both rows carry a URL and the URLs name two postings.
  */
 function urlsConflict(a, b) {
-  return postingUrlRelation(a.url, b.url) === 'distinct';
+  return postingUrlRelation(postingUrl(a), postingUrl(b)) === 'distinct';
+}
+
+const reportUrls = new Map();
+
+/**
+ * A row's posting URL for the URL guards: its URL cell, else the URL its report
+ * names.
+ *
+ * The default nine-column tracker has no URL cell, so reading the cell alone
+ * left both guards blind there: two same-company, same-title rows whose
+ * reports name two different openings (`…/jobs/1001` and `…/jobs/2002`) looked
+ * identical, and this tool deleted one of them. merge-tracker.mjs already
+ * resolved the report's URL in exactly this case — its own comment says
+ * "without the report the guards never see two same-titled postings as
+ * distinct" — so `node merge-tracker.mjs` kept both rows and `node
+ * dedup-tracker.mjs` then removed one. Both now read through
+ * reportUrlToken(), with the same path containment. A placeholder such as
+ * `N/A` needs no filtering here: postingUrlRelation() gives it no key.
+ *
+ * Read lazily and memoised: only rows that already share a company reach a
+ * guard.
+ *
+ * @param {object} row - A parsed applications.md row.
+ * @returns {string}
+ */
+function postingUrl(row) {
+  if (row.url) return row.url;
+  if (!reportUrls.has(row.report)) {
+    reportUrls.set(row.report, reportUrlToken(containedReportFile(row.report, REPORTS_ROOT)));
+  }
+  return reportUrls.get(row.report);
 }
 
 /**
@@ -225,7 +260,7 @@ function urlsConflict(a, b) {
  * @returns {boolean}
  */
 function languageOnOneSide(a, b) {
-  return postingUrlRelation(a.url, b.url) === 'one-sided-language';
+  return postingUrlRelation(postingUrl(a), postingUrl(b)) === 'one-sided-language';
 }
 
 /**
@@ -539,6 +574,24 @@ for (const [company, companyEntries] of groups) {
         lines[lineIdx] = rebuildRow(parts);
         keeper.notes = mergedNotes;
         console.log(`  📝 #${keeper.num}: notes merged`);
+      }
+    }
+
+    // Carry over a posting URL the keeper lacks. The URL cell is the
+    // deterministic dedup key (#3516): left on a deleted row it went with it,
+    // and the surviving row, often the Applied one whose status was just
+    // promoted onto it, fell back to fuzzy company+role matching from then on.
+    // Cluster members never name two different postings (urlsConflict vetoes
+    // that), so the first URL found is this posting's. The donor's raw cell is
+    // copied, so a `[label](href)` link stays a link.
+    if (COLMAP.url != null && !normalizeUrl(keeper.url) && keeper.lineIdx !== undefined) {
+      const donor = cluster.slice(1).find(e => e.lineIdx !== undefined && normalizeUrl(e.url));
+      if (donor) {
+        const parts = lines[keeper.lineIdx].split('|').map(s => s.trim());
+        parts[COLMAP.url] = lines[donor.lineIdx].split('|').map(s => s.trim())[COLMAP.url];
+        lines[keeper.lineIdx] = rebuildRow(parts);
+        keeper.url = donor.url;
+        console.log(`  🔗 #${keeper.num}: posting URL kept from #${donor.num}`);
       }
     }
 

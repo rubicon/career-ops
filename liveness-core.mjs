@@ -299,6 +299,15 @@ export function classifyLiveness({ status = 0, requestedUrl = '', finalUrl = '',
   if (status === 403 || status === 429 || status === 503) {
     return { result: 'uncertain', code: 'access_blocked', reason: `HTTP ${status} (access blocked, likely anti-bot)` };
   }
+  // 401 and 451 refuse the REQUEST, not the posting: a sign-in wall, and a
+  // posting withheld for legal reasons, usually by region. AGENTS.md: "a
+  // login/error page is unconfirmed, not closed". Both bodies are short error
+  // pages, so they fell through to insufficient_content and read as expired,
+  // which scan --verify writes as skipped_expired and later scans dedup-skip.
+  if (status === 401 || status === 451) {
+    const why = status === 401 ? 'sign-in required' : 'unavailable for legal reasons, usually by region';
+    return { result: 'uncertain', code: 'access_blocked', reason: `HTTP ${status} (${why})` };
+  }
   // Any other 5xx is a transient origin error (502/504 gateway hiccups, 500s
   // during deploys), not evidence the posting is gone. Without this guard the
   // short error body ("502 Bad Gateway / nginx") falls through to the
@@ -385,6 +394,53 @@ export function isUnreadableVerdict(verdict) {
 }
 
 /**
+ * Does this verdict prove the posting is CLOSED?
+ *
+ * `expired` alone does not: an `insufficient_content` verdict is also
+ * `expired`, and it means the body could not be read — a page still
+ * hydrating, a client-side render that never landed — not that the posting
+ * is gone (#5408). AGENTS.md is explicit that "an unreadable JD, loading
+ * placeholder, or login/error page is unconfirmed, not closed".
+ *
+ * One definition, because the rule used to be COPIED. The scan-history record
+ * planner and batch-evaluate-gemini.mjs each spelled it out as
+ * `result !== 'expired' || isUnreadableVerdict(...)`, and the third caller —
+ * check-liveness.mjs --discard-expired, the only one of the three that writes
+ * to the tracker — took every `expired` verdict and never applied it. So an
+ * Evaluated row whose page was merely slow to render was rewritten to
+ * Discarded with the note "posting closed". Routing all three through here is
+ * what stops a fourth caller drifting the same way.
+ *
+ * @param {{result?: string, code?: string}|null|undefined} verdict
+ * @returns {boolean}
+ */
+export function isClosureEvidence(verdict) {
+  return verdict?.result === 'expired' && !isUnreadableVerdict(verdict);
+}
+
+/**
+ * The URLs `--discard-expired` may close: only those with closure evidence.
+ *
+ * Kept pure and exported so the exact selection the CLI uses is testable
+ * without a browser.
+ *
+ * @param {Array<{url?: string, result?: string, code?: string}>} verdicts
+ * @returns {{closed: string[], unreadable: string[]}} `unreadable` is reported
+ *   rather than silently dropped, so the user can see why a row they expected
+ *   to close was left alone.
+ */
+export function discardableExpiredUrls(verdicts) {
+  const closed = [];
+  const unreadable = [];
+  for (const v of verdicts ?? []) {
+    if (!v?.url) continue;
+    if (isClosureEvidence(v)) closed.push(v.url);
+    else if (v.result === 'expired' && isUnreadableVerdict(v)) unreadable.push(v.url);
+  }
+  return { closed, unreadable };
+}
+
+/**
  * Plan the `skipped_expired` scan-history rows for a batch of liveness verdicts.
  *
  * The pure half of recording a liveness sweep (#3891). Kept here rather than in
@@ -448,7 +504,7 @@ export function planExpiredHistoryRows(scanHistoryText = '', verdicts = [], norm
   const rows = [];
   const claimed = new Set();
   for (const verdict of verdicts ?? []) {
-    if (verdict?.result !== 'expired' || isUnreadableVerdict(verdict)) continue;
+    if (!isClosureEvidence(verdict)) continue;
     const candidate = typeof verdict.url === 'string' ? verdict.url.trim() : '';
     if (!candidate) continue;
     const known = knownByKey.get(normalizeUrl(candidate));
