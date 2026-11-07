@@ -100,7 +100,8 @@ function read(rel: string): string | null {
   }
 }
 
-export type InboxJob = { url: string; company: string; role: string; location?: string; compensation?: string; done: boolean; postedAt?: string };
+export type InboxFit = { score: number; reason: string };
+export type InboxJob = { url: string; company: string; role: string; location?: string; compensation?: string; done: boolean; postedAt?: string; rankStamp?: string; fit?: InboxFit | null };
 
 /** Parse data/pipeline.md. The row grammar and its labeled-segment handling
  *  live in pipeline-table.mjs — see there for the column rules (#1015, #1017). */
@@ -250,7 +251,7 @@ export async function pdfReadyForReport(n: string): Promise<boolean> {
 }
 
 export type PdfPathForReportResult =
-  | { status: "found"; path: string }
+  | { status: "found"; path: string; html: string | null }
   | { status: "not-found" }
   | { status: "invalid" }
   | { status: "rejected" };
@@ -297,7 +298,12 @@ export async function pdfPathStatusForReport(n: string, kind: "cv" | "cover" = "
   // (e.g. reports/) and pass a root-scoped realpath check — serving a file
   // this route was never meant to expose.
   if (!isRegularContainedFile(abs, outputDir)) return { status: "rejected" };
-  return { status: "found", path: abs };
+  let html: string | null = null;
+  if (entry.html) {
+    const htmlAbs = path.resolve(root, entry.html);
+    if (htmlAbs.startsWith(outputDir + path.sep) && isRegularContainedFile(htmlAbs, outputDir)) html = htmlAbs;
+  }
+  return { status: "found", path: abs, html };
 }
 
 export async function pdfPathForReport(n: string): Promise<string | null> {
