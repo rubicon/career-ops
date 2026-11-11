@@ -16,6 +16,7 @@
  *   OPENAI_MODEL (or --model)   — the model id
  */
 
+import { randomUUID } from 'crypto';
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
@@ -26,6 +27,7 @@ import { readLockedSections } from './theme-style.mjs';
 import { redactIfEnabled, restoreIfEnabled } from './utils/privacy-filter.mjs';
 import { assertLlmRequestAllowed } from './lib/llm-outbound.mjs';
 import { installPiiInterceptor } from './lib/pii-interceptor.mjs';
+import { endpointHeaders } from './lib/endpoint-headers.mjs';
 
 // Ambient guard over global fetch (idempotent); the explicit gate below is the
 // primary layer.
@@ -33,7 +35,10 @@ installPiiInterceptor();
 
 try {
   const { config } = await import('dotenv');
-  config();
+  // The data root's .env first: doctor.mjs, remember-cli.mjs, scan.mjs and the
+  // plugin engine all read it there. The working directory's .env, the only one
+  // read before, still supplies what the data root's leaves unset.
+  config({ path: [join(getCareerOpsRoot(), '.env'), join(process.cwd(), '.env')] });
 } catch { /* dotenv optional */ }
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -283,9 +288,12 @@ function buildTokenLimit(limit, host) {
 // ---------------------------------------------------------------------------
 // Call the OpenAI-compatible endpoint
 // ---------------------------------------------------------------------------
-const timeoutMs = parseInt(process.env.OPENAI_TIMEOUT_MS || '300000', 10);
-if (Number.isNaN(timeoutMs) || timeoutMs <= 0) {
-  console.error(`❌  Invalid OPENAI_TIMEOUT_MS: "${process.env.OPENAI_TIMEOUT_MS}" — must be a positive integer (milliseconds).`);
+// Digits only (parseInt read "300s" as a 300 ms timeout) and at most 2^31-1 ms:
+// AbortSignal.timeout() fires a longer delay after 1 ms, and throws past 2^32-1.
+const timeoutRaw = (process.env.OPENAI_TIMEOUT_MS || '300000').trim();
+const timeoutMs = /^\d+$/.test(timeoutRaw) ? Number(timeoutRaw) : NaN;
+if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647) {
+  console.error(`❌  Invalid OPENAI_TIMEOUT_MS: "${process.env.OPENAI_TIMEOUT_MS}" — must be a positive integer of at most 2147483647 (milliseconds).`);
   process.exit(1);
 }
 
@@ -303,6 +311,14 @@ console.log(`🤖  Calling ${modelName} via ${endpointHost} (output cap ${maxTok
 
 const headers = { 'Content-Type': 'application/json' };
 if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+// OpenCode Go answers HTTP 400 MissingSessionID to a request with no session
+// id, and its docs ask for an own user agent: the same headers openai-eval.mjs
+// sends (#5825), for opencode.ai only. One tailoring run is one conversation.
+// https://opencode.ai/v2/docs/console/go/#where-can-i-use-it
+let careerOpsVersion;
+// VERSION may carry a release-please marker ("1.38.0 # x-release-please-version").
+try { careerOpsVersion = readFileSync(join(ROOT, 'VERSION'), 'utf-8').trim().split(/\s+/)[0] || undefined; } catch { /* default User-Agent version */ }
+Object.assign(headers, endpointHeaders(endpointHost, randomUUID(), careerOpsVersion));
 
 let tailoredHtml;
 try {

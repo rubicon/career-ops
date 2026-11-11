@@ -1152,6 +1152,13 @@ export function buildTitleGate(titleFilterConfig, contentFilter, titleFilter = b
 // often lives only in the JD DESCRIPTION body text, which this filter reads
 // (same field `content_filter` already reads — `job.description`).
 //
+// It also reads `job.eligibilityText` (#6747): a source's own eligibility
+// statement given outside the JD, such as the CryptocurrencyJobs feed
+// teaser's "can be done remotely anywhere in the United States, or Canada".
+// countryEligibilityText() below joins the two, and the rules apply to that
+// text. content_filter and visa_filter never see `eligibilityText`, so a
+// posting that carries one but no description still reads as having no JD.
+//
 // Semantics (case-insensitive substring), mirroring location_filter's
 // "don't penalize missing data" discipline exactly:
 //   - Candidate's own `location.country` (config/profile.yml) is "United
@@ -1212,6 +1219,32 @@ export function buildCountryEligibilityFilter(countryEligibilityFilter, candidat
   };
 }
 
+/**
+ * The text country_eligibility_filter reads for a job: its description and
+ * its `eligibilityText` (#6747), each when it is a non-empty string, joined
+ * by a newline. '' when the job has neither, which the filter passes.
+ * @param {{ description?: unknown, eligibilityText?: unknown }} job
+ * @returns {string}
+ */
+export function countryEligibilityText(job) {
+  return [job?.description, job?.eligibilityText]
+    .filter(t => typeof t === 'string' && t.trim() !== '')
+    .join('\n');
+}
+
+/**
+ * The text visa_filter reads for a job: its description and its `visaText`,
+ * each when it is a non-empty string, joined by a newline. '' when the job
+ * has neither, which the filter treats as no mention.
+ * @param {{ description?: unknown, visaText?: unknown }} job
+ * @returns {string}
+ */
+export function visaFilterText(job) {
+  return [job?.description, job?.visaText]
+    .filter(t => typeof t === 'string' && t.trim() !== '')
+    .join('\n');
+}
+
 // ── Visa / work-authorization filter ────────────────────────────────
 // Optional. If `visa_filter` is absent (or `enabled: false`), all jobs pass.
 // Surfaces roles that sponsor a work visa — US (H-1B / H-1B1 / O-1),
@@ -1221,6 +1254,12 @@ export function buildCountryEligibilityFilter(countryEligibilityFilter, candidat
 // DESCRIPTION text, so it only has signal for providers that populate
 // job.description (see the content_filter header above); jobs without one fall
 // back to the require_mention rule below.
+//
+// It also reads `job.visaText`: text a source gives outside the JD that may
+// state sponsorship, such as the Startup Jobs feed teaser, which stays out of
+// `description` because content_filter would read it as the JD.
+// visaFilterText() below joins the two. content_filter and
+// country_eligibility_filter never see `visaText`.
 //
 // Semantics (case-insensitive substring):
 //   - any `negative` keyword present → reject (an explicit "no sponsorship")
@@ -1866,25 +1905,20 @@ function historyPolicyFromPortals() {
 }
 
 /**
- * Read the opt-in `scan_history.dedup_include_location` switch.
+ * Whether the company+role dedupe key includes location.
  *
- * Collapsing every city of one role into a single pipeline entry is deliberate
- * (see `collectSeenCompanyRoles`) and stays the default: companies that open one
- * req per city would otherwise leak a city variant per scan. But the survivor is
- * whichever twin the provider returned first, which is wrong for anyone whose
- * eligibility is location-bound — an EU-based candidate's `location_filter`
- * passes both "London, UK" and "Dublin, IE", so the filter cannot choose between
- * them and dedupe silently keeps the city he cannot legally work in.
- *
- * Strict boolean `true` only: a stray string or number is a typo, and the safe
- * reading of a typo is the default behavior, not a pipeline full of city
- * variants the user never asked for.
+ * True when `scan_history.dedup_include_location` is true. An explicit
+ * `false` stays off. When the flag is missing, a non-array
+ * `location_filter.workplace_policy` turns it on.
  *
  * @param {object} [config] - Parsed portals.yml.
  * @returns {boolean} Whether the location joins the company+role dedupe key.
  */
 export function resolveDedupIncludeLocation(config = {}) {
-  return config.scan_history?.dedup_include_location === true;
+  if (config.scan_history?.dedup_include_location === true) return true;
+  if (config.scan_history?.dedup_include_location === false) return false;
+  const policy = config.location_filter?.workplace_policy;
+  return !!policy && typeof policy === 'object' && !Array.isArray(policy);
 }
 
 /**
@@ -2276,7 +2310,7 @@ function extractPipelineUrl(line) {
  * @returns {{company: string, role: string, location: string}|null} The pair plus
  *   its location (`''` when unknown), or null when the line has none to contribute.
  */
-function extractPipelineCompanyRole(line) {
+export function extractPipelineCompanyRole(line) {
   const entry = pipelineEntry(line, PIPELINE_CHECKBOX_STRICT_RE);
   if (!entry || entry.expired) return null;
 
@@ -5258,11 +5292,11 @@ async function main() {
           totalFilteredContent++;
           continue;
         }
-        if (!countryEligibilityFilter(job.description)) {
+        if (!countryEligibilityFilter(countryEligibilityText(job))) {
           totalFilteredCountryEligibility++;
           continue;
         }
-        if (!visaFilter(job.description)) {
+        if (!visaFilter(visaFilterText(job))) {
           totalFilteredVisa++;
           continue;
         }
