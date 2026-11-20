@@ -508,6 +508,41 @@ const SECTION_ALIASES = new Map([
   ['conocimientos técnicos', 'skills'],
   ['herramientas e idiomas', 'skills'],
   ['intereses', 'interests'],
+  // Italian (modes/it) — the same failure as the blocks around it: no Italian
+  // title resolved here, so cv.sections matched no section of an Italian CV and
+  // the order guard compared raw titles. A bare "Competenze" is the key-skills
+  // block and "Competenze tecniche" the skills list, as the Spanish block reads
+  // its own words.
+  ['profilo', 'summary'],
+  ['profilo professionale', 'summary'],
+  ['sommario', 'summary'],
+  ['riepilogo', 'summary'],
+  ['chi sono', 'summary'],
+  ['competenze', 'competencies'],
+  ['competenze chiave', 'competencies'],
+  ['competenze principali', 'competencies'],
+  ['esperienza', 'experience'],
+  ['esperienza professionale', 'experience'],
+  ['esperienze professionali', 'experience'],
+  ['esperienza lavorativa', 'experience'],
+  ['esperienze lavorative', 'experience'],
+  ['percorso professionale', 'experience'],
+  ['progetti', 'projects'],
+  ['progetti selezionati', 'projects'],
+  ['progetti personali', 'projects'],
+  ['formazione', 'education'],
+  ['istruzione', 'education'],
+  ['istruzione e formazione', 'education'],
+  ['titoli di studio', 'education'],
+  ['certificazioni', 'certifications'],
+  ['certificati', 'certifications'],
+  ['premi', 'awards'],
+  ['riconoscimenti', 'awards'],
+  ['premi e riconoscimenti', 'awards'],
+  ['competenze tecniche', 'skills'],
+  ['conoscenze tecniche', 'skills'],
+  ['capacità tecniche', 'skills'],
+  ['interessi', 'interests'],
   // Chinese — the same failure the Polish block above fixes, for the two Chinese
   // markets this repo ships modes for: Traditional (modes/zh-TW) and Simplified
   // (modes/zh), rendered through templates/cv-template.zh-minimal.html. Both
@@ -574,6 +609,36 @@ const SECTION_ALIASES = new Map([
   ['技术栈', 'skills'],
   ['興趣', 'interests'],
   ['兴趣', 'interests'],
+  // Portuguese (pt-BR / pt-PT) — the same failure as Spanish above: modes/pt/
+  // ships a Portuguese market set, but no Portuguese title resolved here, so
+  // cv.sections matched no section of a Portuguese CV and the order guard fell
+  // back to comparing raw titles. Titles that fold to a Spanish spelling
+  // (competências, experiência, habilidades, perfil, certificados, prêmios)
+  // already resolve through the Spanish block and are not repeated.
+  ['resumo', 'summary'],
+  ['resumo profissional', 'summary'],
+  ['perfil profissional', 'summary'],
+  ['sobre mim', 'summary'],
+  ['competências principais', 'competencies'],
+  ['competências-chave', 'competencies'],
+  ['principais competências', 'competencies'],
+  ['experiência profissional', 'experience'],
+  ['experiências profissionais', 'experience'],
+  ['histórico profissional', 'experience'],
+  ['projetos', 'projects'],
+  ['projetos pessoais', 'projects'],
+  ['projetos selecionados', 'projects'],
+  ['formação', 'education'],
+  ['formação acadêmica', 'education'],
+  ['formação académica', 'education'],
+  ['educação', 'education'],
+  ['escolaridade', 'education'],
+  ['certificações', 'certifications'],
+  ['cursos e certificações', 'certifications'],
+  ['prêmios e reconhecimentos', 'awards'],
+  ['competências técnicas', 'skills'],
+  ['conhecimentos técnicos', 'skills'],
+  ['interesses', 'interests'],
 ].map(([alias, key]) => [foldDiacritics(alias), key]));
 
 function normalizeSectionTitle(text) {
